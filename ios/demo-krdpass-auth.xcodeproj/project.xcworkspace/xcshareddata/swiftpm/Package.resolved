@@ -1,0 +1,15 @@
+{
+  "originHash" : "b9fe09fff4977528ad83f3213e53cf456d34cc6392ab5d6fc3b5e86fe29fa408",
+  "pins" : [
+    {
+      "identity" : "krdpass-auth-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ditkrg/krdpass-auth-sdk-ios.git",
+      "state" : {
+        "revision" : "7ae4015f592e6e16abee1888f240595c29e5818e",
+        "version" : "1.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}

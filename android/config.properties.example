@@ -1,0 +1,5 @@
+# KRDPASS Android demo configuration
+backendUrl=https://your-backend.example.com
+redirectUri=https://your-backend.example.com/_krdpass/oauth/callback
+clientId=your-client-id
+environment=development

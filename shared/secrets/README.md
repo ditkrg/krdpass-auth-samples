@@ -1,0 +1,91 @@
+# Shared Secrets (Local-Only)
+
+This folder is the single source of truth for **local** secrets and example configuration.
+
+- Everything in `shared/secrets/` is gitignored **except** this README and `.env.example`.
+- Put real values in `shared/secrets/.env`.
+- Then run the sync script to generate all per-example config files.
+
+## Setup
+
+1. Create the local secrets file:
+
+```bash
+cp shared/secrets/.env.example shared/secrets/.env
+```
+
+2. Fill in values in `shared/secrets/.env`.
+
+3. Choose your sync target:
+
+```bash
+# All sample apps (default)
+./scripts/sync-secrets.sh
+
+# Android-only sample apps
+./scripts/sync-secrets-android.sh
+
+# iOS-only sample apps
+./scripts/sync-secrets-ios.sh
+```
+
+Or run and sync in one step:
+
+```bash
+./scripts/run-sample.sh --app flutter --platform android --sync
+./scripts/run-sample.sh --app react-native --platform ios --device "My iPhone" --sync
+```
+
+## What Gets Generated
+
+- `server/.env` (includes `CLIENT_SECRET` + `RSA_PRIVATE_KEY`)
+- `android/config.properties` (Android target only)
+- `flutter/.env`
+- `react-native/.env`
+- By default (`PATCH_TRACKED_DEMO_FILES=true`): tracked sample project files are patched with your local values:
+  - Associated domains from `REDIRECT_URI`
+  - Android sample package IDs from `DEMO_ANDROID_PACKAGE_NAME`
+  - iOS sample bundle IDs from `DEMO_IOS_BUNDLE_ID`
+  - iOS signing team IDs from `DEMO_IOS_TEAM_ID` (when provided)
+- Set `PATCH_TRACKED_DEMO_FILES=false` if you want sync to skip tracked-file edits.
+
+## Required Values By Target
+
+Common required values (all targets):
+
+- `BACKEND_URL`
+- `REDIRECT_URI`
+- `CLIENT_ID`
+- `CLIENT_SECRET`
+- `RSA_PRIVATE_KEY`
+
+Android target (`./scripts/sync-secrets-android.sh`):
+
+- Required: all common values above
+- Signing:
+  - Either set your own keystore (`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD`)
+  - Or leave keystore vars unset to use auto-generated shared demo keystore
+- Optional:
+  - `DEMO_ANDROID_PACKAGE_NAME` (default: `krd.pass.auth.demo`)
+  - `DEMO_ANDROID_APP_LINKS`
+  - `DEMO_ANDROID_SHA256`
+
+iOS target (`./scripts/sync-secrets-ios.sh`):
+
+- Required: all common values above
+- Recommended for real device signing + Universal Links:
+  - `DEMO_IOS_BUNDLE_ID`
+  - `DEMO_IOS_TEAM_ID` (or `DEMO_IOS_APP_IDS`)
+
+## Android Signing (one key for all Android examples)
+
+By default the sync script creates a shared demo keystore at `shared/secrets/krdpass-demo.keystore` (if missing) and uses it for all Android/Flutter/React Native examples. The Android package name defaults to `krd.pass.auth.demo` and can be overridden with `DEMO_ANDROID_PACKAGE_NAME`. The script prints the SHA256 fingerprint so you can add it to the CAS allow list.
+
+To use your own keystore instead, set in `.env`:
+
+- `ANDROID_KEYSTORE_PATH`
+- `ANDROID_KEYSTORE_ALIAS`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD`
+
+The script will use that keystore and print its SHA256 for CAS.

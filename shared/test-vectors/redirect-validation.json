@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "KRDPASS Auth SDK Redirect URI Validation Test Vectors",
+  "description": "Canonical test cases for redirect URI validation across all SDK platforms",
+  "version": "1.0",
+  "rule": {
+    "summary": "HTTPS scheme required, host required and must match configured host, any HTTPS path allowed",
+    "details": [
+      "Configured redirect URI must use 'https' scheme and have a non-empty host",
+      "Incoming redirect URI must use 'https' scheme and have a non-empty host",
+      "Incoming redirect URI host must match configured redirect URI host exactly",
+      "Path is NOT validated: any HTTPS path on the same host is allowed",
+      "Query parameters are allowed and not validated"
+    ]
+  },
+  "configuredRedirectUri": "https://example.gov/_krdpass/oauth/callback",
+  "vectors": [
+    {
+      "id": "valid-exact-match",
+      "description": "Exact match of configured redirect URI",
+      "input": "https://example.gov/_krdpass/oauth/callback",
+      "expected": true,
+      "reason": "Scheme, host, and path all match configured URI"
+    },
+    {
+      "id": "valid-same-host-different-path",
+      "description": "Same host, different path (should pass)",
+      "input": "https://example.gov/api/auth/callback",
+      "expected": true,
+      "reason": "Host matches configured host; path difference is allowed"
+    },
+    {
+      "id": "valid-same-host-root-path",
+      "description": "Same host, root path (should pass)",
+      "input": "https://example.gov/",
+      "expected": true,
+      "reason": "Host matches configured host; any path including root is allowed"
+    },
+    {
+      "id": "valid-same-host-query-params",
+      "description": "Same host with query parameters (should pass)",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "Host matches; query parameters are allowed"
+    },
+    {
+      "id": "valid-same-host-different-path-query-params",
+      "description": "Same host, different path, with query parameters (should pass)",
+      "input": "https://example.gov/callback?code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "Host matches; path difference and query parameters are both allowed"
+    },
+    {
+      "id": "invalid-custom-scheme",
+      "description": "Custom scheme (should fail)",
+      "input": "myapp://oauth/callback",
+      "expected": false,
+      "reason": "Non-HTTPS scheme is not allowed"
+    },
+    {
+      "id": "invalid-http-scheme",
+      "description": "HTTP scheme instead of HTTPS (should fail)",
+      "input": "http://example.gov/_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "HTTP scheme is not allowed; only HTTPS is permitted"
+    },
+    {
+      "id": "invalid-empty-host",
+      "description": "Missing host (should fail)",
+      "input": "https:///_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "Host is required and cannot be empty"
+    },
+    {
+      "id": "invalid-host-mismatch",
+      "description": "Different host (should fail)",
+      "input": "https://malicious.gov/_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "Host must match configured redirect URI host exactly"
+    },
+    {
+      "id": "invalid-host-mismatch-subdomain",
+      "description": "Subdomain mismatch (should fail)",
+      "input": "https://api.example.gov/_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "Host must match exactly; subdomain differences are not allowed"
+    },
+    {
+      "id": "invalid-host-mismatch-port",
+      "description": "Same host with different port (should fail)",
+      "input": "https://example.gov:8443/_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "Host comparison should include port if present; port mismatch is a host mismatch"
+    },
+    {
+      "id": "invalid-malformed-uri",
+      "description": "Malformed URI (should fail)",
+      "input": "not-a-valid-uri",
+      "expected": false,
+      "reason": "Invalid URI format should fail validation"
+    },
+    {
+      "id": "invalid-empty-string",
+      "description": "Empty string (should fail)",
+      "input": "",
+      "expected": false,
+      "reason": "Empty string is not a valid URI"
+    },
+    {
+      "id": "valid-case-insensitive-scheme",
+      "description": "HTTPS scheme case variation (implementation-dependent)",
+      "input": "HTTPS://example.gov/_krdpass/oauth/callback",
+      "expected": true,
+      "note": "Most URL parsers normalize scheme to lowercase; should pass if parser handles it",
+      "reason": "Scheme comparison should be case-insensitive (HTTPS = https)"
+    },
+    {
+      "id": "valid-ipv4-host",
+      "description": "IPv4 address as host (should pass if configured)",
+      "configuredRedirectUri": "https://192.168.1.1/_krdpass/oauth/callback",
+      "input": "https://192.168.1.1/api/callback",
+      "expected": true,
+      "reason": "IPv4 addresses are valid hosts; should match if configured host is IPv4"
+    },
+    {
+      "id": "valid-ipv6-host",
+      "description": "IPv6 address as host (should pass if configured)",
+      "configuredRedirectUri": "https://[2001:db8::1]/_krdpass/oauth/callback",
+      "input": "https://[2001:db8::1]/api/callback",
+      "expected": true,
+      "reason": "IPv6 addresses are valid hosts; should match if configured host is IPv6"
+    }
+  ]
+}
