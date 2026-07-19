@@ -1,0 +1,25 @@
+# Keeps GitHub Actions (SHA-pinned) and each sample app's dependencies monitored for
+# updates and security advisories.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pub"
+    directory: "/flutter"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/react-native"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
