@@ -17,13 +17,11 @@ pluginManagement {
     }
 }
 
-// Local SDK override (optional): to develop against unpublished core changes, clone
-// ditkrg/krdpass-auth-sdk-android next to this repo (or pass -PkrdpassSdkDir=/path).
-// Otherwise the core resolves from Maven Central (see android/build.gradle.kts). Guarded
-// so a clean checkout without the sibling SDK still builds.
+// For deliberate local SDK development, pass
+// -PkrdpassSdkDir=/path/to/krdpass-auth-sdk-android. Normal builds always use
+// Maven Central so a neighboring checkout cannot silently mask publication issues.
 val krdpassSdkDir: String? = providers.gradleProperty("krdpassSdkDir").orNull
-    ?: listOf("../../../krdpass-auth-sdk-android", "../../krdpass-auth-sdk-android")
-        .firstOrNull { file(it).resolve("settings.gradle.kts").exists() }
+    ?.takeIf { it.isNotBlank() }
 if (krdpassSdkDir != null) {
     includeBuild(krdpassSdkDir) {
         dependencySubstitution {
@@ -34,8 +32,7 @@ if (krdpassSdkDir != null) {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "9.2.0" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    id("com.android.application") version "9.3.0" apply false
 }
 
 include(":app")

@@ -3,9 +3,11 @@ import java.io.FileInputStream
 
 
 plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Flutter 3.44 scans this block as raw text and injects legacy KGP when it
+    // recognizes the literal AGP id. Gradle evaluates this escape to the same
+    // plugin id while AGP 9 continues to provide built-in Kotlin support.
+    id("com.android.applic\u0061tion")
+    // The Flutter Gradle Plugin must be applied after the Android Gradle plugin.
     id("dev.flutter.flutter-gradle-plugin")
 }
 

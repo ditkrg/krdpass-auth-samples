@@ -128,5 +128,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     // KRDPASS Android SDK, resolved from Maven Central, or substituted from a local SDK
     // checkout when the composite-build override in settings.gradle.kts is active.
-    implementation("krd.pass:krdpass-auth:1.1.0")
+    implementation("krd.pass:krdpass-auth:1.1.1")
 }

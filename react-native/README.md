@@ -17,6 +17,15 @@ Reference Expo app for **Sign in with KRDPASS**. The SDK package supports both E
 - iOS/Android native toolchains for `expo run:*`
 - A running backend that implements the server-mediated PAR + token exchange (see [Sign in with KRDPASS](https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html))
 
+This example intentionally commits and maintains its Android native project;
+the iOS project is generated locally by Expo prebuild. Expo Doctor's app-config
+synchronization check is therefore disabled in `package.json`; other Doctor
+checks remain enabled.
+
+The dependency versions follow Expo SDK 55's exact supported matrix. React,
+React Native, and Expo packages must move together during an SDK migration;
+`npm run doctor` verifies that alignment.
+
 ## Required Onboarding Inputs
 
 - `CLIENT_ID`

@@ -27,6 +27,30 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    # Expo SDK upgrades are coordinated platform migrations, not independent
+    # package bumps. SDK 56/57 require newer React Native, Node, iOS, and Xcode
+    # matrices than this currently deployable SDK 55 sample.
+    ignore:
+      - dependency-name: "expo*"
+        versions: [">=56.0.0"]
+      - dependency-name: "babel-preset-expo"
+        versions: [">=56.0.0"]
+      - dependency-name: "eslint-config-expo"
+        versions: [">=56.0.0"]
+      - dependency-name: "react"
+        versions: [">19.2.0"]
+      - dependency-name: "react-native"
+        versions: [">0.83.6"]
+      - dependency-name: "react-native-get-random-values"
+        versions: [">=2.0.0"]
+      - dependency-name: "react-native-safe-area-context"
+        versions: [">5.6.2"]
+      - dependency-name: "react-native-svg"
+        versions: [">15.15.3"]
+      - dependency-name: "eslint"
+        versions: [">=10.0.0"]
+      - dependency-name: "typescript"
+        versions: [">=6.0.0"]
   - package-ecosystem: "npm"
     directory: "/server"
     schedule:

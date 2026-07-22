@@ -180,7 +180,7 @@ class AuthBackendService(
      */
     private suspend fun makeRequest(request: Request): String = suspendCancellableCoroutine { continuation ->
         val call = httpClient.newCall(request)
-        
+
         continuation.invokeOnCancellation {
             call.cancel()
         }
@@ -192,7 +192,7 @@ class AuthBackendService(
 
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    val body = response.body?.string() ?: ""
+                    val body = response.body.string()
                     if (!response.isSuccessful) {
                         continuation.resumeWithException(IOException(describeError(response.code, response.message, body)))
                         return

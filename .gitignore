@@ -13,7 +13,6 @@
 .dart_tool/
 .packages
 .pub/
-pubspec.lock
 *.dart_tool/
 build/
 pubspec_overrides.yaml
@@ -34,6 +33,12 @@ local.properties
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
+!flutter/android/gradle/wrapper/gradle-wrapper.jar
+!flutter/android/gradlew
+!flutter/android/gradlew.bat
+!react-native/android/gradle/wrapper/gradle-wrapper.jar
+!react-native/android/gradlew
+!react-native/android/gradlew.bat
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 
