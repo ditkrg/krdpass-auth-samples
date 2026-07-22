@@ -14,7 +14,7 @@
     "@expo/vector-icons": "^15.1.1",
     "expo": "~55.0.26",
     "expo-build-properties": "~55.0.15",
-    "expo-dev-client": "~55.0.35",
+    "expo-dev-client": "~57.0.6",
     "expo-font": "~55.0.8",
     "expo-status-bar": "~55.0.6",
     "krdpass-auth-react-native": "github:ditkrg/krdpass-auth-sdk-react-native#v1.1.0",
