@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade the Android, Flutter, React Native, Expo, and Node dependency stacks
   to their latest mutually compatible versions.
-- Consume React Native SDK 1.1.2, whose Expo plugin migrates stale native iOS
+- Consume React Native SDK 1.1.3, whose Expo plugin migrates stale native iOS
   core tags during prebuild.
 - Consume Flutter SDK 1.1.2, avoiding Flutter's legacy Kotlin plugin injection
   while using AGP 9 built-in Kotlin.

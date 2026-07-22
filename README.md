@@ -21,7 +21,7 @@ The SDKs themselves are **not** in this repo. Each sample resolves its SDK from:
 | **Android** (Kotlin) | [`ditkrg/krdpass-auth-sdk-android`](https://github.com/ditkrg/krdpass-auth-sdk-android) | Maven Central: `krd.pass:krdpass-auth:1.1.1` |
 | **iOS** (Swift) | [`ditkrg/krdpass-auth-sdk-ios`](https://github.com/ditkrg/krdpass-auth-sdk-ios) | Swift Package Manager: `from: "1.1.0"` |
 | **Flutter** | [`ditkrg/krdpass-auth-sdk-flutter`](https://github.com/ditkrg/krdpass-auth-sdk-flutter) | git dependency: `ref: v1.1.2` |
-| **React Native** | [`ditkrg/krdpass-auth-sdk-react-native`](https://github.com/ditkrg/krdpass-auth-sdk-react-native) | git dependency: `#v1.1.2` |
+| **React Native** | [`ditkrg/krdpass-auth-sdk-react-native`](https://github.com/ditkrg/krdpass-auth-sdk-react-native) | git dependency: `#v1.1.3` |
 
 ## Sample apps
 

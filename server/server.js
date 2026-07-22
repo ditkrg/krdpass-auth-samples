@@ -18,6 +18,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import 'dotenv/config';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import { setupExtrasRoutes } from './extras.js';
 // -------------------------------------------------------------
@@ -274,6 +275,12 @@ async function revokeToken({ token, tokenTypeHint, authServerUrl }) {
 
 const app = express();
 app.use(express.json({ limit: '32kb' }));
+app.use('/oauth', rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+}));
 app.use((req, res, next) => {
   if (req.path.startsWith('/oauth/')) {
     // Prevent auth responses from being cached by intermediaries.
