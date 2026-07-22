@@ -18,7 +18,7 @@
     "expo-status-bar": "~55.0.6",
     "krdpass-auth-react-native": "github:ditkrg/krdpass-auth-sdk-react-native#v1.1.0",
     "react": "19.2.7",
-    "react-native": "0.83.10",
+    "react-native": "0.86.0",
     "react-native-get-random-values": "^2.0.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.5"
