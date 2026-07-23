@@ -54,7 +54,7 @@ the platform-specific steps:
 - Flutter: [ditkrg/krdpass-auth-sdk-flutter](https://github.com/ditkrg/krdpass-auth-sdk-flutter), pubspec git dependency (`ref: v1.0.0`)
 - Android: [ditkrg/krdpass-auth-sdk-android](https://github.com/ditkrg/krdpass-auth-sdk-android), Maven Central, `krd.pass:krdpass-auth:1.0.0` (resolves with `mavenCentral()`, no token)
 - iOS: [ditkrg/krdpass-auth-sdk-ios](https://github.com/ditkrg/krdpass-auth-sdk-ios), SwiftPM / CocoaPods git tag `v1.0.0`
-- React Native: [ditkrg/krdpass-auth-sdk-react-native](https://github.com/ditkrg/krdpass-auth-sdk-react-native), npm git dependency (`#v1.0.0`)
+- React Native: [ditkrg/krdpass-auth-sdk-react-native](https://github.com/ditkrg/krdpass-auth-sdk-react-native), npm git dependency (`#v1.2.0`)
 
 For advanced integration details and protocol specifications, refer to [specs/sdk-auth-api.md](specs/sdk-auth-api.md).
 
