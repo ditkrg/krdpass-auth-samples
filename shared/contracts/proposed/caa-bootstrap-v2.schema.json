@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pass.krd/schemas/proposed/caa-bootstrap-v2.schema.json",
+  "title": "KRDPass CAA bootstrap request v2 (PROPOSED, NOT IMPLEMENTED)",
+  "description": "PROPOSED ONLY. CAS implements the v1 bootstrap contract (flat authorization parameters, returnUrl, and an optional FingerPrint of '<SHA-256>|<package>'). This v2 envelope requires a CAS change that has not been made, so nothing sends or accepts it today. Do not implement against this file. When CAS can accept v2, it must do so additively alongside v1, because additionalProperties:false plus a required protocolVersion would break every installed client.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocolVersion",
+    "authorizationRequest",
+    "returnUrl"
+  ],
+  "properties": {
+    "protocolVersion": {
+      "const": 2
+    },
+    "authorizationRequest": {
+      "$ref": "#/$defs/authorizationRequest"
+    },
+    "returnUrl": {
+      "type": "string",
+      "pattern": "^/connect/authorize/callback(?:\\?.*)?$",
+      "description": "Trusted callback constructed from the allowlisted authorizationRequest. It must not be copied from an untrusted request field."
+    },
+    "callerIdentity": {
+      "$ref": "#/$defs/androidActivityResultCaller"
+    }
+  },
+  "$defs": {
+    "authorizationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_id",
+        "request_uri"
+      ],
+      "properties": {
+        "acr_values": {
+          "type": "string"
+        },
+        "client_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code_challenge": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code_challenge_method": {
+          "type": "string",
+          "enum": [
+            "S256"
+          ]
+        },
+        "login_hint": {
+          "type": "string"
+        },
+        "max_age": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "redirect_uri": {
+          "type": "string",
+          "format": "uri"
+        },
+        "request_uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "response_mode": {
+          "type": "string"
+        },
+        "response_type": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ui_locales": {
+          "type": "string"
+        }
+      }
+    },
+    "androidActivityResultCaller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "platform",
+        "source",
+        "packageName",
+        "signingCertificatesSha256"
+      ],
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "platform": {
+          "const": "android"
+        },
+        "source": {
+          "const": "activity_result"
+        },
+        "packageName": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z][A-Za-z0-9_]*)+$"
+        },
+        "signingCertificatesSha256": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Current APK content signers in ascending bytewise string order. CAS must enforce ordering in addition to schema validation.",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:[A-F0-9]{2}:){31}[A-F0-9]{2}$"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "protocolVersion": 2,
+      "authorizationRequest": {
+        "client_id": "service-client",
+        "request_uri": "urn:ietf:params:oauth:request_uri:example",
+        "state": "random-state"
+      },
+      "returnUrl": "/connect/authorize/callback?client_id=service-client&request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Aexample&state=random-state",
+      "callerIdentity": {
+        "version": 2,
+        "platform": "android",
+        "source": "activity_result",
+        "packageName": "gov.krd.service",
+        "signingCertificatesSha256": [
+          "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF"
+        ]
+      }
+    }
+  ]
+}

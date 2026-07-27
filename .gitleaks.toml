@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+# CocoaPods lockfiles record a SPEC CHECKSUMS section: one public SHA digest per
+# pod, computed from the podspec. They are high-entropy strings but not secrets.
+# Allowlist lockfiles so secret scanning stays enforced everywhere else.
+[allowlist]
+description = "Dependency lockfile checksums are public digests, not credentials"
+paths = [
+  '''.*Podfile\.lock$''',
+]

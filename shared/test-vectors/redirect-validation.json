@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "KRDPASS Auth SDK Redirect URI Validation Test Vectors",
+  "description": "Canonical redirect-response validation cases shared by KRDPASS Auth SDK integrations.",
+  "version": "2.1",
+  "rule": {
+    "summary": "A response must use HTTPS and the configured redirect origin and encoded path. Query parameters registered on the redirect URI must be preserved exactly; single-valued authorization-response metadata is ignored.",
+    "details": [
+      "Configured and incoming redirect URIs must use HTTPS, have a non-empty host, and contain neither userinfo nor a fragment.",
+      "The incoming URI must match the configured URI's normalized scheme, host, and effective port.",
+      "The incoming URI's encoded path must exactly match the configured URI's encoded path; host-only matching is not sufficient.",
+      "Every query parameter registered on the redirect URI must be present with the same value and multiplicity in the response URI.",
+      "Unconfigured authorization-response parameters may occur once and are ignored, as required by OAuth. Duplicate parameters and extra occurrences of configured query names are rejected.",
+      "Authorization-server registration remains the final authority for exact redirect URI matching. These client-side checks are defence in depth."
+    ],
+    "securityResponseParameters": [
+      "code",
+      "state",
+      "error",
+      "error_description",
+      "error_uri",
+      "iss"
+    ]
+  },
+  "configuredRedirectUri": "https://example.gov/_krdpass/oauth/callback",
+  "vectors": [
+    {
+      "id": "valid-exact-match",
+      "description": "Exact configured redirect URI",
+      "input": "https://example.gov/_krdpass/oauth/callback",
+      "expected": true,
+      "reason": "The configured URI itself is a valid response target."
+    },
+    {
+      "id": "valid-exact-path-oauth-response",
+      "description": "Configured path with OAuth response parameters",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "OAuth response parameters may be appended to the exact configured redirect URI."
+    },
+    {
+      "id": "valid-exact-path-oauth-error",
+      "description": "Configured path with an OAuth error response",
+      "input": "https://example.gov/_krdpass/oauth/callback?error=access_denied&error_description=cancelled&state=xyz789",
+      "expected": true,
+      "reason": "OAuth error response parameters may be appended to the exact configured redirect URI."
+    },
+    {
+      "id": "invalid-duplicate-oauth-response-parameter",
+      "description": "Duplicate OAuth response parameter",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&code=attacker&state=xyz789",
+      "expected": false,
+      "reason": "An OAuth response parameter may occur only once to prevent ambiguous parsing."
+    },
+    {
+      "id": "invalid-same-host-different-path",
+      "description": "Same host with a different callback path",
+      "input": "https://example.gov/api/auth/callback?code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "The encoded path must exactly match the configured redirect URI."
+    },
+    {
+      "id": "invalid-same-host-root-path",
+      "description": "Same host with the root path",
+      "input": "https://example.gov/?code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "Host-only matching is insufficient; the configured callback path is required."
+    },
+    {
+      "id": "valid-single-valued-response-metadata",
+      "description": "Configured path with OpenID Connect session metadata",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&session_state=server-session",
+      "expected": true,
+      "reason": "The endpoint still matches exactly and OAuth clients ignore unrecognized single-valued response parameters."
+    },
+    {
+      "id": "invalid-duplicate-response-metadata",
+      "description": "Duplicate unrecognized authorization response parameter",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&session_state=one&session_state=two",
+      "expected": false,
+      "reason": "Authorization response parameters must not be included more than once."
+    },
+    {
+      "id": "valid-fixed-query-and-oauth-response",
+      "description": "Configured fixed query parameters are retained while OAuth response parameters are appended",
+      "configuredRedirectUri": "https://example.gov/_krdpass/oauth/callback?tenant=citizen&locale=ku",
+      "input": "https://example.gov/_krdpass/oauth/callback?tenant=citizen&locale=ku&code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "Registered query parameters are preserved and OAuth response parameters are appended."
+    },
+    {
+      "id": "invalid-fixed-query-missing",
+      "description": "Configured fixed query parameter is missing",
+      "configuredRedirectUri": "https://example.gov/_krdpass/oauth/callback?tenant=citizen&locale=ku",
+      "input": "https://example.gov/_krdpass/oauth/callback?tenant=citizen&code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "Every registered query parameter must be preserved."
+    },
+    {
+      "id": "invalid-fixed-query-value-changed",
+      "description": "Configured fixed query parameter value changed",
+      "configuredRedirectUri": "https://example.gov/_krdpass/oauth/callback?tenant=citizen&locale=ku",
+      "input": "https://example.gov/_krdpass/oauth/callback?tenant=attacker&locale=ku&code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "Registered query parameter values are part of the redirect URI."
+    },
+    {
+      "id": "invalid-fixed-query-duplicated",
+      "description": "Configured fixed query parameter multiplicity changed",
+      "configuredRedirectUri": "https://example.gov/_krdpass/oauth/callback?tenant=citizen",
+      "input": "https://example.gov/_krdpass/oauth/callback?tenant=citizen&tenant=attacker&code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "Registered query parameter multiplicity must be preserved."
+    },
+    {
+      "id": "invalid-custom-scheme",
+      "description": "Custom scheme",
+      "input": "myapp://oauth/callback",
+      "expected": false,
+      "reason": "Only HTTPS redirect URIs are permitted."
+    },
+    {
+      "id": "invalid-http-scheme",
+      "description": "HTTP instead of HTTPS",
+      "input": "http://example.gov/_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "Only HTTPS redirect URIs are permitted."
+    },
+    {
+      "id": "invalid-empty-host",
+      "description": "Missing host",
+      "input": "https:///_krdpass/oauth/callback",
+      "expected": false,
+      "reason": "A host is required."
+    },
+    {
+      "id": "invalid-host-mismatch",
+      "description": "Different host",
+      "input": "https://malicious.gov/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "The normalized host must match the configured redirect URI."
+    },
+    {
+      "id": "invalid-host-mismatch-subdomain",
+      "description": "Subdomain mismatch",
+      "input": "https://api.example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "Subdomains are distinct redirect hosts."
+    },
+    {
+      "id": "invalid-port-mismatch",
+      "description": "Different effective port",
+      "input": "https://example.gov:8443/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "The effective port is part of the redirect URI authority."
+    },
+    {
+      "id": "invalid-userinfo",
+      "description": "Userinfo in response URI",
+      "input": "https://example.gov@malicious.gov/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": false,
+      "reason": "Userinfo is not permitted in a redirect URI."
+    },
+    {
+      "id": "invalid-fragment",
+      "description": "Fragment in response URI",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789#fragment",
+      "expected": false,
+      "reason": "Fragments are not part of a registered redirect URI."
+    },
+    {
+      "id": "invalid-malformed-uri",
+      "description": "Malformed URI",
+      "input": "not-a-valid-uri",
+      "expected": false,
+      "reason": "The response must be a valid absolute HTTPS URI."
+    },
+    {
+      "id": "invalid-empty-string",
+      "description": "Empty URI",
+      "input": "",
+      "expected": false,
+      "reason": "The response must be a valid absolute HTTPS URI."
+    },
+    {
+      "id": "valid-case-insensitive-scheme-and-host",
+      "description": "Case variation in scheme and host",
+      "input": "HTTPS://EXAMPLE.GOV/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "URL scheme and host comparison are case-insensitive."
+    },
+    {
+      "id": "valid-ipv4-host",
+      "description": "IPv4 host with exact path",
+      "configuredRedirectUri": "https://192.168.1.1/_krdpass/oauth/callback",
+      "input": "https://192.168.1.1/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "IPv4 hosts are supported when the exact path also matches."
+    },
+    {
+      "id": "valid-ipv6-host",
+      "description": "IPv6 host with exact path",
+      "configuredRedirectUri": "https://[2001:db8::1]/_krdpass/oauth/callback",
+      "input": "https://[2001:db8::1]/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expected": true,
+      "reason": "IPv6 hosts are supported when the exact path also matches."
+    }
+  ]
+}

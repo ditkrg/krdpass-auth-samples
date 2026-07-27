@@ -1,0 +1,19 @@
+# Android signing config for the demo build.
+#
+# Copy this file to `android/key.properties` (gitignored) to choose the keystore
+# the Android build is signed with. If it is absent, the build falls back to the
+# default debug keystore.
+#
+# IMPORTANT: KRDPASS validates the CALLING app's signing certificate. This app must
+# be signed with a keystore whose SHA-256 fingerprint is registered against the
+# client, or sign-in fails with `invalid_client`, even when clientId, redirectUri,
+# and scopes are all correct. The default Android debug keystore is NOT registered.
+#
+# Point these at a keystore whose fingerprint is registered for your client.
+# Demo-team members receive the shared registered keystore and its credentials
+# together; scripts/sync-secrets.sh writes this file for them automatically.
+
+storeFile=/absolute/path/to/your-registered.keystore
+storePassword=your-store-password
+keyAlias=your-key-alias
+keyPassword=your-key-password
