@@ -132,7 +132,7 @@ native failure and is not converted into a browser launch.
 |---------|---------|-----|---------|--------------|
 | Singleton Access | `KrdpassAuth` (Object) | `KrdpassAuth.shared` | `KrdpassAuth.instance` | N/A (Functional) |
 | PKCE Support | Built-in | Built-in | Built-in | Built-in |
-| Custom Tabs/SFAuth | Yes | Yes (ASWebAuth) | Yes | Yes |
+| Auth transport | Explicit intent + ActivityResult | Universal Link hand-off | Platform-native | Platform-native |
 
 ---
 **Maintained By:** KRDPASS Developer Platform
