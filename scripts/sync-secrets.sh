@@ -18,14 +18,16 @@ Options:
   --all                    Configure both Android and iOS (default).
   --platform <name>        One of: all, android, ios.
   --secrets-file <path>    Use a custom secrets file (default: shared/secrets/.env).
-  --patch-tracked          Force patching tracked sample files for local run.
-  --no-patch-tracked       Force skipping tracked file patching.
+  --patch-tracked          Rewrite tracked sample sources (package ids, bundle ids,
+                           entitlements, ios Config.swift). Off by default.
+  --no-patch-tracked       Force skipping tracked file patching (the default).
   -h, --help               Show this help.
 
 Environment overrides:
   KRD_SECRETS_FILE         Same as --secrets-file.
   KRD_SYNC_TARGET          Same as --platform.
-  PATCH_TRACKED_DEMO_FILES If set in secrets file, controls tracked-file patching.
+  PATCH_TRACKED_DEMO_FILES If set in secrets file, controls tracked-file patching
+                           (default false).
 
 Platform wrappers:
   ./scripts/sync-secrets-android.sh
@@ -166,7 +168,11 @@ set +a
 # keystore flow below overwrites the variable for the current run.
 SECRETS_DEMO_ANDROID_SHA256="${DEMO_ANDROID_SHA256:-}"
 
-PATCH_TRACKED_DEMO_FILES="${PATCH_TRACKED_DEMO_FILES:-true}"
+# Off by default: patching rewrites tracked sample sources (gradle ids, whole
+# .kt/.java package trees, pbxproj, entitlements, app.json, ios Config.swift),
+# which leaves a contributor's clone dirty and can stage their own client id.
+# Opt in with --patch-tracked when you really are re-pointing the demo apps.
+PATCH_TRACKED_DEMO_FILES="${PATCH_TRACKED_DEMO_FILES:-false}"
 if [[ -n "$CLI_PATCH_TRACKED" ]]; then
   PATCH_TRACKED_DEMO_FILES="$CLI_PATCH_TRACKED"
 fi
@@ -527,6 +533,19 @@ NODE
 }
 
 if [[ "$PATCH_TRACKED_DEMO_FILES" == "true" ]]; then
+  info "patching TRACKED sample sources; these files may be left modified:"
+  if [[ "$TARGET_ANDROID" == "true" ]]; then
+    info "  android/app/build.gradle.kts, flutter/android/app/build.gradle.kts,"
+    info "  react-native/android/app/build.gradle, react-native-bare/android/app/build.gradle,"
+    info "  and the app/src .kt/.java package trees beneath them"
+  fi
+  if [[ "$TARGET_IOS" == "true" ]]; then
+    info "  the four ios project.pbxproj and .entitlements files,"
+    info "  ios/demo-krdpass-auth/Config.swift (receives your clientId and backendUrl)"
+  fi
+  info "  react-native/app.json"
+  info "review with 'git diff' before committing"
+
   if [[ "$TARGET_ANDROID" == "true" ]]; then
     ANDROID_SAMPLE_GRADLE="$ROOT_DIR/android/app/build.gradle.kts"
     FLUTTER_SAMPLE_GRADLE="$ROOT_DIR/flutter/android/app/build.gradle.kts"
@@ -594,7 +613,7 @@ if [[ "$PATCH_TRACKED_DEMO_FILES" == "true" ]]; then
   RN_APP_JSON="$ROOT_DIR/react-native/app.json"
   patch_rn_app_json "$RN_APP_JSON" "$DOMAIN_LINE" "$DEMO_ANDROID_PACKAGE_NAME" "$DEMO_IOS_BUNDLE_ID" "${DEMO_IOS_TEAM_ID:-}" "$TARGET_ANDROID" "$TARGET_IOS"
 else
-  info "skipping tracked file patching (set PATCH_TRACKED_DEMO_FILES=false or pass --no-patch-tracked)"
+  info "skipping tracked file patching (pass --patch-tracked or set PATCH_TRACKED_DEMO_FILES=true to enable)"
 fi
 
 chmod 600 "$ROOT_DIR/server/.env" 2>/dev/null || true
