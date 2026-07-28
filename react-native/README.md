@@ -65,9 +65,13 @@ These values are read by `config.ts`.
 
 3. For the server-mediated flow, run the reference backend: see `../server`.
 
-4. Optional custom Android signing: create `android/key.properties` pointing at
-   your registered keystore. If it is missing, debug builds use default debug
-   signing.
+4. Android signing (required for sign-in to succeed): create
+   `android/key.properties` pointing at your registered keystore.
+
+   KRDPASS validates the calling app's signing certificate, so this app must be signed
+   with a keystore whose SHA-256 fingerprint is registered against the client. If
+   `key.properties` is missing the build uses the default debug keystore, which is **not**
+   registered, so sign-in then fails with `invalid_client`.
 
 5. Configure iOS Universal Link host in `app.json`:
 - `expo.ios.associatedDomains` should include `applinks:<your-app-universal-link-host>`.
