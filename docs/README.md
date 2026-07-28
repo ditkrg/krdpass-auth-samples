@@ -17,7 +17,9 @@ Use this page as the single entry point for repository documentation.
 6. Shared contracts:
    [`BFF token exchange`](../shared/contracts/bff-token-exchange-request.schema.json)
    and [`redirect validation`](../shared/test-vectors/redirect-validation.json).
-7. [Security Policy](SECURITY.md) and [Contributing](CONTRIBUTING.md)
+7. [Token Storage](TOKEN-STORAGE.md)  
+   Where to persist tokens on each platform, and the exact accessibility settings.
+8. [Security Policy](SECURITY.md) and [Contributing](CONTRIBUTING.md)
    Repository governance and contribution standards.
 
 ## External Policy Reference
