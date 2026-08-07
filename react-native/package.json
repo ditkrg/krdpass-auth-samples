@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
-    "expo": "~57.0.8",
+    "expo": "~57.0.9",
     "expo-build-properties": "~57.0.7",
     "expo-dev-client": "~57.0.8",
     "expo-font": "~57.0.1",
