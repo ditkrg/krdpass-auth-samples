@@ -10,7 +10,7 @@ import KrdpassAuth
 @main
 struct demo_krdpass_authApp: App {
     @State private var viewModel = AuthViewModel()
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView(viewModel: viewModel)

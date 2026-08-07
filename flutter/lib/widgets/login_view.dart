@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 class LandingScreen extends StatelessWidget {
   final bool loading;
   final String? error;
+
+  /// Store listing for the KRDPASS app, set only for provider_not_installed.
+  final String? installUrl;
   final bool citizenScope;
   final bool offlineScope;
   final bool useServerMode;
@@ -17,6 +20,7 @@ class LandingScreen extends StatelessWidget {
   const LandingScreen({
     required this.loading,
     this.error,
+    this.installUrl,
     required this.citizenScope,
     required this.offlineScope,
     required this.useServerMode,
@@ -143,6 +147,32 @@ class LandingScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
+                              // provider_not_installed is the only sign-in
+                              // failure the user can actually fix, and the SDK
+                              // hands us the URL that fixes it. This sample has
+                              // no url_launcher dependency, so show the address
+                              // as selectable text rather than adding one; in a
+                              // real app, open it.
+                              if (installUrl != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Install KRDPASS, then try again:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                  ),
+                                ),
+                                SelectableText(
+                                  installUrl!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

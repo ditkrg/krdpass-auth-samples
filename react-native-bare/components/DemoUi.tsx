@@ -174,19 +174,28 @@ export function ClaimSection({
   );
 }
 
-export function ActionMessage({
+/**
+ * A transient status line for the token-management actions.
+ *
+ * `kind` is the state; `text` is only ever text. Keep them separate: encoding "this failed"
+ * into the string (a prefix, an icon, a marker character) forces this component to parse the
+ * message back apart, and that parser is wrong the first time a message legitimately starts
+ * with the marker.
+ */
+export type ActionMessage = { kind: 'ok' | 'error'; text: string };
+
+export function ActionMessageView({
   message,
   theme,
 }: {
-  message?: string;
+  message?: ActionMessage;
   theme: ThemeColors;
 }) {
   if (!message) {
     return null;
   }
 
-  const isError = message.startsWith('❌');
-  const text = message.replace(/^[✅❌]\s*/, '');
+  const isError = message.kind === 'error';
   const foreground = isError ? theme.error : theme.success;
 
   return (
@@ -206,7 +215,9 @@ export function ActionMessage({
         name={isError ? 'error' : 'check-circle'}
         size={16}
       />
-      <Text style={[styles.messageText, { color: foreground }]}>{text}</Text>
+      <Text style={[styles.messageText, { color: foreground }]}>
+        {message.text}
+      </Text>
     </View>
   );
 }

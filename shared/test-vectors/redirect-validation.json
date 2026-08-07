@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "KRDPASS Auth SDK Redirect URI Validation Test Vectors",
   "description": "Canonical redirect-response validation cases shared by KRDPASS Auth SDK integrations.",
-  "version": "2.1",
+  "version": "2.3",
   "rule": {
     "summary": "A response must use HTTPS and the configured redirect origin and encoded path. Query parameters registered on the redirect URI must be preserved exactly; single-valued authorization-response metadata is ignored.",
     "details": [
@@ -11,14 +11,16 @@
       "The incoming URI's encoded path must exactly match the configured URI's encoded path; host-only matching is not sufficient.",
       "Every query parameter registered on the redirect URI must be present with the same value and multiplicity in the response URI.",
       "Unconfigured authorization-response parameters may occur once and are ignored, as required by OAuth. Duplicate parameters and extra occurrences of configured query names are rejected.",
+      "A security response parameter that is present but blank (empty or whitespace only, with or without an '=') is malformed and rejected.",
+      "error_description and error_uri are deliberately not security response parameters. They are display strings shown to the user, never inputs to a security decision, so a blank one is cosmetic rather than malformed and must not fail the callback.",
+      "A response carrying both code and error is ambiguous and is rejected, so that the order in which an implementation checks the two branches can never decide the outcome.",
+      "Percent escapes must be syntactically well formed. Byte sequences that are well formed as escapes but are not valid UTF-8 are decoded lossily (U+FFFD) rather than rejected; rejecting them needs byte-level URI parsing and is out of scope for redirect matching.",
       "Authorization-server registration remains the final authority for exact redirect URI matching. These client-side checks are defence in depth."
     ],
     "securityResponseParameters": [
       "code",
       "state",
       "error",
-      "error_description",
-      "error_uri",
       "iss"
     ]
   },
@@ -204,6 +206,144 @@
       "input": "https://[2001:db8::1]/_krdpass/oauth/callback?code=abc123&state=xyz789",
       "expected": true,
       "reason": "IPv6 hosts are supported when the exact path also matches."
+    },
+    {
+      "id": "valid-iss-response-parameter",
+      "description": "RFC 9207 iss appended to the configured redirect URI",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https%3A%2F%2Faccount.id.krd",
+      "expected": true,
+      "reason": "iss is an authorization response parameter. Whether its value is the expected issuer is decided by the issuerVectors contract, not by redirect matching."
+    },
+    {
+      "id": "invalid-empty-iss",
+      "description": "Empty iss value",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=",
+      "expected": false,
+      "reason": "iss is a security response parameter: present but blank is malformed."
+    },
+    {
+      "id": "invalid-whitespace-iss",
+      "description": "Whitespace-only iss value",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=%20",
+      "expected": false,
+      "reason": "A whitespace-only security response parameter is blank, not a value."
+    },
+    {
+      "id": "invalid-valueless-iss",
+      "description": "iss with no value at all",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss",
+      "expected": false,
+      "reason": "A security response parameter with no '=' carries no value and is rejected."
+    },
+    {
+      "id": "invalid-code-and-error-together",
+      "description": "Response carrying both code and error",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&error=access_denied&state=xyz789",
+      "expected": false,
+      "reason": "A response carrying both code and error is ambiguous; branch order must never decide the outcome."
+    },
+    {
+      "id": "valid-invalid-utf8-percent-sequence",
+      "description": "Response parameter value whose percent escapes are not valid UTF-8",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&session_state=%FF",
+      "expected": true,
+      "reason": "%FF is a well formed percent escape that is not valid UTF-8. It is decoded lossily to U+FFFD and accepted; only syntactically malformed escapes are rejected."
+    }
+  ],
+  "issuerRule": {
+    "summary": "RFC 9207: when an authorization response carrying a code also carries iss, the percent-decoded iss must exactly equal the environment's authorization server URL. An absent iss is accepted.",
+    "details": [
+      "The comparison is exact string equality after percent-decoding. Trailing slashes, case, and ports are not normalised, matching how the SDKs already compare the id_token iss claim against the same environment value.",
+      "iss is compared only on the success branch. CAS omits iss on error responses, and an error response delivers no credential to bind to an issuer.",
+      "An absent iss must not fail: requiring it would reject every CAS error callback.",
+      "A present-but-blank iss never reaches this comparison; the redirect-response rule above rejects it first as invalid_redirect."
+    ],
+    "environments": {
+      "production": "https://account.id.krd",
+      "development": "https://auth.dev.krd"
+    }
+  },
+  "issuerVectors": [
+    {
+      "id": "issuer-matches-on-success-percent-encoded",
+      "description": "Percent-encoded iss equal to the production authorization server",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https%3A%2F%2Faccount.id.krd",
+      "expectedState": "xyz789",
+      "expectedResult": "success",
+      "reason": "This is the shape CAS actually sends: iss last and percent-encoded."
+    },
+    {
+      "id": "issuer-matches-on-success-unencoded",
+      "description": "Literal iss equal to the production authorization server",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https://account.id.krd",
+      "expectedState": "xyz789",
+      "expectedResult": "success",
+      "reason": "Percent-encoding of the iss value is not significant; the decoded value is compared."
+    },
+    {
+      "id": "issuer-mismatch-on-success",
+      "description": "iss from an unrelated authorization server",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https%3A%2F%2Fattacker.example",
+      "expectedState": "xyz789",
+      "expectedResult": "issuer_mismatch",
+      "reason": "A code from a different authorization server is a mix-up attack and is rejected fail-closed."
+    },
+    {
+      "id": "issuer-mismatch-across-environments",
+      "description": "Development issuer on a production configuration",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https%3A%2F%2Fauth.dev.krd",
+      "expectedState": "xyz789",
+      "expectedResult": "issuer_mismatch",
+      "reason": "The expected issuer comes from the configured environment, not from a fixed constant."
+    },
+    {
+      "id": "issuer-mismatch-trailing-slash",
+      "description": "Expected issuer with a trailing slash",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https%3A%2F%2Faccount.id.krd%2F",
+      "expectedState": "xyz789",
+      "expectedResult": "issuer_mismatch",
+      "reason": "The comparison is exact; issuer identifiers are not URL-normalised."
+    },
+    {
+      "id": "issuer-matches-development",
+      "description": "Development issuer on a development configuration",
+      "environment": "development",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789&iss=https%3A%2F%2Fauth.dev.krd",
+      "expectedState": "xyz789",
+      "expectedResult": "success",
+      "reason": "The development environment's authorization server URL is the expected issuer there."
+    },
+    {
+      "id": "issuer-absent-on-success",
+      "description": "Success response with no iss at all",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?code=abc123&state=xyz789",
+      "expectedState": "xyz789",
+      "expectedResult": "success",
+      "reason": "iss is optional: an authorization server that does not support RFC 9207 must still work."
+    },
+    {
+      "id": "issuer-absent-on-error",
+      "description": "Error response with no iss at all",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?error=server_error&error_description=boom&state=xyz789",
+      "expectedState": "xyz789",
+      "expectedResult": "server_error",
+      "reason": "CAS omits iss on error responses; requiring it would break every error callback."
+    },
+    {
+      "id": "issuer-not-compared-on-error",
+      "description": "Error response carrying an unrelated iss",
+      "environment": "production",
+      "input": "https://example.gov/_krdpass/oauth/callback?error=server_error&error_description=boom&state=xyz789&iss=https%3A%2F%2Fattacker.example",
+      "expectedState": "xyz789",
+      "expectedResult": "server_error",
+      "reason": "The error branch delivers no credential to bind to an issuer, so iss is not compared there."
     }
   ]
 }

@@ -16,13 +16,11 @@ Reference Flutter app for **Sign in with KRDPASS**.
 - A publicly reachable HTTPS URL for the callback
 - A running backend that performs PAR + token exchange (see the integration guide linked below)
 
-## Required Onboarding Inputs
+## Onboarding
 
-- `CLIENT_ID`
-- `REDIRECT_URI` (HTTPS)
-- `BACKEND_URL`
-- `ENVIRONMENT` (`development` or `production`)
-- iOS associated domain and Android app identity metadata registered with KRDPASS
+You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
+this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
+for what to send to `integration@pass.krd`.
 
 ## Step-by-Step Setup
 
@@ -32,7 +30,7 @@ Reference Flutter app for **Sign in with KRDPASS**.
 flutter pub get
 ```
 
-   This sample targets Flutter SDK `v1.3.0` and Android core `1.3.0`, both
+   This sample targets Flutter SDK `v1.4.0` and Android core `1.4.0`, both
    resolved from the published release.
 
 2. Create local `.env` from template (required: `pubspec.yaml` bundles `.env` as an asset,
@@ -76,7 +74,11 @@ flutter run
 
 ## Notes
 
-- Keep `client_secret` and private keys on backend only.
+- Keep `client_secret` and private keys on backend only. `.env` is declared as
+  a Flutter asset in `pubspec.yaml`, which means it is copied verbatim into the
+  APK and the IPA and can be extracted from either. Everything in it is public
+  by construction: a client id, a redirect URI, a backend URL. Nothing that has
+  to stay secret can live there.
 - Use your app's Universal Link host for `REDIRECT_URI` (iOS Associated Domains).
 - Keep the HTTPS origin, encoded path, and fixed query parameters exactly
   matched to onboarding registration.

@@ -1,9 +1,12 @@
-// -------------------------------------------------------------
 // Demo-only extra endpoints for app links
-// -------------------------------------------------------------
 
 // GET /.well-known/apple-app-site-association - iOS Universal Links
 // GET /.well-known/assetlinks.json - Android App Links
+//
+// These documents are static once the process is configured, so this module
+// returns the payloads and server.js owns the routing. That keeps the route
+// table in one place and avoids importing the response helpers back out of
+// server.js, which would be a circular import.
 const parseCommaList = (value) =>
     String(value || '')
         .split(',')
@@ -47,42 +50,36 @@ const resolveAndroidTargets = () => {
     return [];
 };
 
-function setupExtrasRoutes(app) {
+// Returns { path: jsonPayload } for the app-link documents this process is
+// configured to serve. An unconfigured platform contributes no route at all.
+function resolveExtrasRoutes() {
+    const routes = {};
+
     const iosAppIds = resolveIosAppIds();
-    
-    // iOS AASA
     if (iosAppIds.length > 0) {
-        app.get('/.well-known/apple-app-site-association', (_, res) => {
-            const aasa = {
-                applinks: {
-                    details: iosAppIds.map((appId) => ({
-                        appID: appId,
-                        paths: ['/_krdpass/oauth/callback']
-                    }))
-                }
-            };
-            res.set('Content-Type', 'application/json');
-            res.json(aasa);
-        });
+        routes['/.well-known/apple-app-site-association'] = {
+            applinks: {
+                details: iosAppIds.map((appId) => ({
+                    appID: appId,
+                    paths: ['/_krdpass/oauth/callback']
+                }))
+            }
+        };
     }
 
-    // Android Asset Links
     const androidTargets = resolveAndroidTargets();
-
     if (androidTargets.length > 0) {
-        app.get('/.well-known/assetlinks.json', (_, res) => {
-            const assetLinks = androidTargets.map(({ packageName, fingerprint }) => ({
-                relation: ["delegate_permission/common.handle_all_urls"],
-                target: {
-                    namespace: "android_app",
-                    package_name: packageName,
-                    sha256_cert_fingerprints: [fingerprint]
-                }
-            }));
-            res.set('Content-Type', 'application/json');
-            res.json(assetLinks);
-        });
+        routes['/.well-known/assetlinks.json'] = androidTargets.map(({ packageName, fingerprint }) => ({
+            relation: ["delegate_permission/common.handle_all_urls"],
+            target: {
+                namespace: "android_app",
+                package_name: packageName,
+                sha256_cert_fingerprints: [fingerprint]
+            }
+        }));
     }
+
+    return routes;
 }
 
-export { setupExtrasRoutes };
+export { resolveExtrasRoutes };

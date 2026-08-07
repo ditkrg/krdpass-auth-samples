@@ -10,7 +10,7 @@ import SwiftUI
 struct ContentView: View {
     var viewModel: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         Group {
             if viewModel.tokens != nil {

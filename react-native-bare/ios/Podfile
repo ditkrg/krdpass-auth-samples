@@ -16,7 +16,17 @@ end
 
 target 'KrdpassAuthBare' do
   # CocoaPods cannot express this git source through the SDK podspec alone.
-  pod 'KrdpassAuth', :git => 'https://github.com/ditkrg/krdpass-auth-sdk-ios.git', :tag => 'v1.3.0'
+  #
+  # A tag is mutable. CocoaPods records only :git and :tag in Podfile.lock's
+  # CHECKOUT OPTIONS, and its SPEC CHECKSUMS hash covers the podspec text rather
+  # than the checked-out source, so retagging v1.4.0 at a different commit is
+  # undetectable here. A production integration should pin the commit as well:
+  #
+  #   pod 'KrdpassAuth', :git => 'https://github.com/ditkrg/krdpass-auth-sdk-ios.git',
+  #                      :commit => '<full 40-character sha>'
+  #
+  # (:tag and :commit are mutually exclusive; :commit alone is the tamper-evident one.)
+  pod 'KrdpassAuth', :git => 'https://github.com/ditkrg/krdpass-auth-sdk-ios.git', :tag => 'v1.4.0'
 
   config = use_native_modules!
 

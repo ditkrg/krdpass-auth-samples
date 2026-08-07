@@ -35,6 +35,7 @@ import krd.pass.auth.demo.ui.theme.KrdpassSuccess
 import krd.pass.auth.KrdpassAuth
 import krd.pass.auth.KrdpassTokenResult
 import krd.pass.auth.KrdpassUserInfo
+import krd.pass.auth.demo.ActionMessage
 
 /**
  * The main UI entry point for the demo app.
@@ -53,14 +54,16 @@ fun MainScreen(
     onVerifyToken: () -> Unit,
     onRefreshToken: () -> Unit,
     onRevokeToken: () -> Unit,
-    actionMessage: String? = null
+    actionMessage: ActionMessage? = null,
+    installUrl: String? = null,
+    onInstallProvider: (String) -> Unit = {}
 ) {
     var citizenScope by remember { mutableStateOf(true) }
     var offlineScope by remember { mutableStateOf(true) }
     var useServerMode by remember { mutableStateOf(true) }
 
-    // NOTE: decodeTokenUnverified is unverified: for display only, never for trust decisions.
-    // It throws on a non-JWT (access tokens are often opaque), so decode defensively.
+    // decodeTokenUnverified is unverified: display only, never a trust decision. It throws on
+    // a non-JWT, and access tokens are often opaque, so decode defensively.
     fun claimsOf(token: String?): Map<String, Any?> =
         token?.let { runCatching { KrdpassAuth.decodeTokenUnverified(it) }.getOrNull() } ?: emptyMap()
     val idClaims = claimsOf(tokens?.idToken)
@@ -79,7 +82,9 @@ fun MainScreen(
                 onOfflineScopeChange = { offlineScope = it },
                 onServerModeChange = { useServerMode = it },
                 onSignInClick = { onSignIn(citizenScope, offlineScope, useServerMode) },
-                onClearError = onClearError
+                onClearError = onClearError,
+                installUrl = installUrl,
+                onInstallProvider = onInstallProvider
             )
         } else {
             LoggedInDashboard(
@@ -110,7 +115,9 @@ private fun LandingScreen(
     onOfflineScopeChange: (Boolean) -> Unit,
     onServerModeChange: (Boolean) -> Unit,
     onSignInClick: () -> Unit,
-    onClearError: () -> Unit
+    onClearError: () -> Unit,
+    installUrl: String? = null,
+    onInstallProvider: (String) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     Column(
@@ -207,6 +214,22 @@ private fun LandingScreen(
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                             )
                         }
+                        // provider_not_installed is the only sign-in failure the user can
+                        // actually fix, and the SDK hands us the store URL that fixes it.
+                        // Offer it as an action instead of ending on an error message.
+                        if (installUrl != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = { onInstallProvider(installUrl) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
+                                Text("Install KRDPASS", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = onClearError, modifier = Modifier.size(28.dp)) {
@@ -257,14 +280,14 @@ private fun LandingScreen(
                         modifier = Modifier.scale(0.8f)
                     )
                 }
-                
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
 
                 // Auth Mode Toggle
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Auth Mode", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                        Text(if (useServerMode) "Backend-mediated (Secure)" else "Direct (Client-only)", 
+                        Text(if (useServerMode) "Backend-mediated (Secure)" else "Direct (Client-only)",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     }
                     Switch(
@@ -320,24 +343,27 @@ private fun LoggedInDashboard(
     onVerifyToken: () -> Unit,
     onRefreshToken: () -> Unit,
     onRevokeToken: () -> Unit,
-    actionMessage: String? = null
+    actionMessage: ActionMessage? = null
 ) {
     // Identity resolution
-    val fullName = userInfo?.citizenFullName ?: run {
+    val fullName = run {
         val parts = listOfNotNull(
-            claims["citizen_first"] as? String,
-            claims["citizen_second"] as? String,
-            claims["citizen_third"] as? String,
-            claims["citizen_surname"] as? String
+            userInfo?.citizenFirst ?: claims["citizen_first"] as? String,
+            userInfo?.citizenSecond ?: claims["citizen_second"] as? String,
+            userInfo?.citizenThird ?: claims["citizen_third"] as? String,
+            userInfo?.citizenSurname ?: claims["citizen_surname"] as? String
         ).filter { it.isNotBlank() }
-        if (parts.isNotEmpty()) parts.joinToString(" ") else claims["upn"] as? String ?: "Citizen User"
+        when {
+            parts.isNotEmpty() -> parts.joinToString(" ")
+            else -> userInfo?.name ?: claims["upn"] as? String ?: "Citizen User"
+        }
     }
-    
+
     val email = userInfo?.email ?: claims["email"] as? String ?: claims["upn"] as? String ?: "No email"
     val birthdate = userInfo?.birthdate ?: claims["birthdate"] as? String
     val sex = userInfo?.sexAtBirth ?: claims["sex_at_birth"] as? String
     val profilePicUrl = userInfo?.picture ?: claims["citizen_profile_picture"] as? String ?: idClaims["citizen_profile_picture"] as? String
-    
+
     val scrollState = rememberScrollState()
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -356,7 +382,7 @@ private fun LoggedInDashboard(
                 )
             }
             IconButton(
-                onClick = onLogout, 
+                onClick = onLogout,
                 modifier = Modifier
                     .size(40.dp)
                     .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
@@ -380,26 +406,26 @@ private fun LoggedInDashboard(
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                fullName, 
+                                fullName,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp
-                                ), 
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 2, 
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                email, 
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), 
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), 
+                                email,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-                    
+
                     Spacer(Modifier.height(20.dp))
 
                     // Verification Badge
@@ -415,24 +441,24 @@ private fun LoggedInDashboard(
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = KrdpassSuccess, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "Official Verified Citizen", 
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp), 
+                                "Official Verified Citizen",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
                                 color = KrdpassSuccess
                             )
                         }
                     }
                 }
             }
-            
+
             Spacer(Modifier.height(8.dp))
 
             // Personal Details Section
             Text(
-                "Personal Details", 
+                "Personal Details",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PersonalDetailCard(
                     icon = Icons.Default.DateRange,
@@ -449,22 +475,22 @@ private fun LoggedInDashboard(
             }
 
             Spacer(Modifier.height(24.dp))
-            
+
             // User Info Protocol
             UserInfoProtocolCard(
                 isLoading = isLoadingUserInfo,
                 onFetchUserInfo = onFetchUserInfo,
                 userInfo = userInfo
             )
-            
+
             Spacer(Modifier.height(16.dp))
-            
+
             // Token Details
             TokenDetailsCard(
                 idClaims = idClaims,
                 accessClaims = accessClaims
             )
-            
+
             Spacer(Modifier.height(16.dp))
 
             // Token Management Actions
@@ -475,7 +501,7 @@ private fun LoggedInDashboard(
                 onRevokeToken = onRevokeToken,
                 actionMessage = actionMessage
             )
-            
+
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -487,7 +513,7 @@ private fun TokenManagementCard(
     onVerifyToken: () -> Unit,
     onRefreshToken: () -> Unit,
     onRevokeToken: () -> Unit,
-    actionMessage: String? = null
+    actionMessage: ActionMessage? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -502,18 +528,31 @@ private fun TokenManagementCard(
                 Spacer(Modifier.width(12.dp))
                 Text("Token Management", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
             }
-            
-            actionMessage?.let {
+
+            actionMessage?.let { message ->
+                // The kind drives the icon and the colour; the text is only ever text.
+                val tint =
+                    if (message.ok) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    else MaterialTheme.colorScheme.error
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                    Icon(
+                        if (message.ok) Icons.Default.Info else Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier.size(14.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text(
+                        message.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (message.ok) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else tint
+                    )
                 }
             }
-            
+
             Spacer(Modifier.height(16.dp))
-            
+
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onVerifyToken,
@@ -626,8 +665,8 @@ private fun UserInfoProtocolCard(
                     )
 
                     Button(
-                        onClick = onFetchUserInfo, 
-                        modifier = Modifier.fillMaxWidth().height(52.dp), 
+                        onClick = onFetchUserInfo,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                         enabled = !isLoading
@@ -657,7 +696,7 @@ private fun UserInfoProtocolCard(
                                 Text("Successfully synced!", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = KrdpassSuccess)
                             }
                         }
-                        
+
                         Spacer(Modifier.height(12.dp))
                         ClaimSection("UserInfo Claims", userInfo.raw)
                     }
@@ -673,7 +712,7 @@ private fun TokenDetailsCard(
     accessClaims: Map<String, Any?>
 ) {
     var expanded by remember { mutableStateOf(false) }
-    
+
     Card(
         modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
         shape = RoundedCornerShape(16.dp),
@@ -718,14 +757,14 @@ private fun ClaimSection(title: String, data: Map<String, Any?>) {
                 data.forEach { (k, v) ->
                     Row(modifier = Modifier.padding(vertical = 2.dp)) {
                         Text(
-                            "$k:", 
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp), 
+                            "$k:",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
                             modifier = Modifier.width(100.dp),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            v.toString(), 
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), 
+                            v.toString(),
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                         )

@@ -15,13 +15,20 @@ across launches, use the platform's encrypted store with the settings below.
 
 ## Android
 
-Use `EncryptedSharedPreferences` with `MasterKey.KeyScheme.AES256_GCM`.
+Encrypt the token with a key held in the Android Keystore, and store the
+ciphertext. The key never leaves the Keystore, so a copied file is useless.
 
 Do not use plain `SharedPreferences`: it is world-readable on a rooted device
 and is included in cloud backups by default.
 
-Consider `setUserAuthenticationRequired` on the master key when the token grants
-access to sensitive citizen data.
+Do not reach for `androidx.security:security-crypto` either. Every API in it
+(`EncryptedSharedPreferences`, `EncryptedFile`, `MasterKey`, `MasterKeys`) was
+deprecated in 1.1.0, in favour of the platform APIs and direct Android Keystore
+use. It still works, but it is not what to build on now.
+
+When the token grants access to sensitive citizen data, require user
+authentication to unlock the key (`setUserAuthenticationRequired` on the
+`KeyGenParameterSpec`).
 
 ## iOS
 
@@ -34,18 +41,23 @@ use `kSecAttrAccessibleAlways` or any accessibility class without the
 
 ## Flutter
 
-Use `flutter_secure_storage`, configured explicitly:
+Use `flutter_secure_storage`, setting the iOS accessibility class explicitly:
 
 ```dart
 const storage = FlutterSecureStorage(
   iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
 );
 ```
 
-Both options are required. Without `encryptedSharedPreferences: true` the
-Android implementation falls back to plain preferences, and without
-`first_unlock_this_device` the iOS item syncs to iCloud Keychain.
+`first_unlock_this_device` is the part you have to ask for. Without it the iOS
+item syncs to iCloud Keychain and the refresh token leaves the device.
+
+The Android side needs no options as of `flutter_secure_storage` 10.x: the
+default `AndroidOptions()` wraps the key with
+`RSA/ECB/OAEPWithSHA-256AndMGF1Padding` and stores with `AES/GCM/NoPadding`.
+Do not pass `AndroidOptions(encryptedSharedPreferences: true)`: 10.0.0 moved off
+the deprecated Jetpack Security library and removed that parameter outright, so
+it is a compile error, not a deprecation warning.
 
 ## React Native
 

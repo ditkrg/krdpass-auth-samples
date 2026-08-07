@@ -1,5 +1,8 @@
 package krd.pass.auth.demo
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -13,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import krd.pass.auth.KrdpassAuth
 import krd.pass.auth.KrdpassConfig
@@ -43,10 +47,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        require(BuildConfig.BACKEND_URL.isNotBlank()) { "BACKEND_URL is missing. Set backendUrl in config.properties." }
-        require(redirectUri.isNotBlank()) { "REDIRECT_URI is missing. Set redirectUri in config.properties." }
-        require(clientId.isNotBlank()) { "CLIENT_ID is missing. Set clientId in config.properties." }
 
         // Initialize once (ideally in Application.onCreate), then register this Activity for results.
         KrdpassAuth.initialize(
@@ -83,6 +83,8 @@ private fun AppContent(viewModel: DemoViewModel) {
         }
     }
 
+    val context = LocalContext.current
+
     MainScreen(
         loading = state.loading,
         tokens = state.tokens,
@@ -96,5 +98,15 @@ private fun AppContent(viewModel: DemoViewModel) {
         onRefreshToken = { viewModel.refreshToken() },
         onRevokeToken = { viewModel.revokeToken() },
         actionMessage = state.actionMessage,
+        installUrl = state.installUrl,
+        onInstallProvider = { url ->
+            // The SDK's install URL opens the Play Store listing, or KRDPASS itself if it
+            // turns out to be installed after all.
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (_: ActivityNotFoundException) {
+                // No browser and no store on this device. Nothing useful left to do.
+            }
+        },
     )
 }

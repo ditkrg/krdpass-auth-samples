@@ -20,18 +20,23 @@ final class AuthViewModel {
     var userInfo: KrdpassUserInfo?
     var errorMessage: String?
 
+    /// App Store listing for KRDPASS, set only when sign-in failed with
+    /// `provider_not_installed`. It is the one auth failure the user can fix, so the UI
+    /// offers it as a button instead of leaving them at a dead end.
+    var installUrl: URL?
+
     // Configuration toggles
     var includeCitizenScope = true
     var includeOfflineScope = true
     var useServerMode = true
-    
+
     // MARK: - Dependencies
-    
+
     private let krdpassAuth: KrdpassAuth
     private let backendService: AuthBackendService
-    
+
     // MARK: - Init
-    
+
     init() {
         let config = KrdpassConfig(
             clientId: Config.clientId,
@@ -41,19 +46,26 @@ final class AuthViewModel {
         self.krdpassAuth = KrdpassAuth(config: config)
         self.backendService = AuthBackendService(baseUrl: Config.backendUrl)
     }
-    
+
     // MARK: - Auth Config
-    
+
     var currentConfig: KrdpassConfig {
         krdpassAuth.currentConfig
     }
-    
+
     // MARK: - Sign In
-    
+
+    /// Sign in, handling each authentication outcome on its own terms.
+    ///
+    /// `AuthResult` is a closed enum and both modes funnel into the same typed errors, so
+    /// there is no reason to flatten them into one string:
+    /// a cancellation is not a failure, a timeout is retryable, and `provider_not_installed`
+    /// carries the App Store URL that fixes it.
     func signIn() async {
         isLoading = true
         errorMessage = nil
-        
+        installUrl = nil
+
         do {
             var scopes = [KrdpassScopes.openid, KrdpassScopes.profile]
             if includeCitizenScope {
@@ -62,32 +74,43 @@ final class AuthViewModel {
             if includeOfflineScope {
                 scopes.append(KrdpassScopes.offlineAccess)
             }
-            
+
             if useServerMode {
                 try await signInWithServer(scopes: scopes)
             } else {
                 try await signIn(scopes: scopes)
             }
+        } catch KrdpassError.userCancelled {
+            // The user backed out on purpose: drop the spinner, show no error.
+        } catch KrdpassError.timeout {
+            errorMessage = "KRDPASS did not respond in time. Try signing in again."
+        } catch KrdpassError.busy {
+            errorMessage = "A sign-in is already in progress. Finish or cancel it first."
+        } catch KrdpassError.providerNotInstalled(installUrl: let url) {
+            // The only failure with a recovery action. Keep the message short and let the
+            // button do the work.
+            errorMessage = "KRDPASS is not installed on this device."
+            installUrl = url.flatMap(URL.init(string:))
         } catch {
             errorMessage = error.localizedDescription
         }
-        
+
         isLoading = false
     }
-    
+
     /// Direct mode - SDK handles everything
     private func signIn(scopes: [String]) async throws {
         let result = try await krdpassAuth.signIn(scopes: scopes)
         self.tokens = result
     }
-    
+
     /// Server mode - uses backend for PAR and token exchange
     private func signInWithServer(scopes: [String]) async throws {
         // 1. Generate PKCE pair + nonce
         let pkce = try krdpassAuth.generatePkcePair()
         let state = try krdpassAuth.generateState()
         let nonce = try krdpassAuth.generateState()
-        
+
         // 2. Get request URI from backend
         let parResponse = try await backendService.getRequestUri(
             codeChallenge: pkce.codeChallenge,
@@ -107,7 +130,9 @@ final class AuthViewModel {
             state: parResponse.state,
             timeout: authTimeout
         )
-        
+
+        // AuthResult is a closed enum, so this switch is exhaustive: add a case to the SDK
+        // and this stops compiling instead of silently landing in a `default`.
         switch authResult {
         case .success(let response):
             // 4. Exchange code for tokens via backend
@@ -116,68 +141,160 @@ final class AuthViewModel {
                 state: parResponse.state ?? state,
                 codeVerifier: pkce.codeVerifier
             )
-            
-            if let result = KrdpassTokenResult(dictionary: tokenResponse.asDictionary) {
-                self.tokens = result
-            } else {
-                // Fallback to manual if asDictionary is missing or invalid
-                self.tokens = KrdpassTokenResult(
-                    accessToken: tokenResponse.accessToken,
-                    idToken: tokenResponse.idToken,
-                    tokenType: tokenResponse.tokenType ?? "Bearer",
-                    expiresIn: tokenResponse.expiresIn ?? 3600,
-                    refreshToken: tokenResponse.refreshToken,
-                    scope: tokenResponse.scope
-                )
+            self.tokens = try Self.tokenResult(from: tokenResponse)
+
+        // Map onto the same typed errors the direct signIn() path throws, so signIn() above
+        // handles one set of outcomes whichever mode ran.
+        case .cancelled(let rawDescription):
+            throw KrdpassError.userCancelled(rawDescription: rawDescription)
+        case .timeout:
+            throw KrdpassError.timeout
+        case .busy:
+            throw KrdpassError.busy
+        case .error(let authError):
+            if authError.error == "provider_not_installed" {
+                throw KrdpassError.providerNotInstalled(installUrl: authError.installUrl)
             }
-            
-        default:
-            throw SignInError(message: authResult.message ?? "Authentication failed")
+            throw KrdpassError.authenticationFailed(authError.message, code: authError.error)
         }
     }
-    
+
+    /// Build a `KrdpassTokenResult` from the backend response.
+    ///
+    /// `KrdpassTokenResult(dictionary:)` returns nil only when `accessToken` is absent or
+    /// empty, which means the backend returned no usable token. Inventing an `expiresIn`
+    /// to construct one anyway would fabricate a token lifetime and then silently use an
+    /// access token the caller never actually got. Fail instead.
+    private static func tokenResult(from response: TokenResponseDTO) throws -> KrdpassTokenResult {
+        guard let result = KrdpassTokenResult(dictionary: response.asDictionary) else {
+            throw SignInError(message: "The backend returned no access token.")
+        }
+        return result
+    }
+
     // MARK: - Deep Link Handling
-    
+
     func handleDeepLink(_ url: URL) {
         if krdpassAuth.canHandle(url) {
             krdpassAuth.handle(url)
         }
     }
-    
+
     // MARK: - Logout
-    
-    func logout() {
+
+    /// Sign out.
+    ///
+    /// Clearing the local fields is the visible half. The half that matters is revoking the
+    /// refresh token, because a refresh token left alive keeps working long after the user
+    /// believes they signed out.
+    ///
+    /// Neither the SDK nor the reference BFF exposes an RP-initiated end-session endpoint,
+    /// so this is as far as a client can take it: the grant is revoked, but any access token
+    /// already issued stays valid until it expires. If your deployment adds an end-session
+    /// endpoint, call it here as well.
+    func logout() async {
+        let session = tokens
+        clearSession()
+        guard let session else { return }
+        // Best effort: the local session is already gone and there is no screen left to
+        // retry from, so never block sign-out on the network.
+        try? await revokeSessionTokens(session)
+    }
+
+    /// Drop local state only. Callers that also need the grant revoked use `logout()`.
+    private func clearSession() {
         tokens = nil
         userInfo = nil
         errorMessage = nil
+        installUrl = nil
         isLoading = false
     }
 
+    /// Revoke the refresh token first, then the access token.
+    ///
+    /// Order matters: the refresh token is what lets a holder mint new access tokens, so it
+    /// is the credential an attacker wants. Revoking only the access token, which is what a
+    /// "logout" that clears local fields effectively does, leaves the grant alive server-side.
+    private func revokeSessionTokens(_ session: KrdpassTokenResult) async throws {
+        var targets: [(String, String)] = []
+        if let refreshToken = session.refreshToken { targets.append((refreshToken, "refresh_token")) }
+        targets.append((session.accessToken, "access_token"))
+
+        for (token, hint) in targets {
+            if useServerMode {
+                try await backendService.revokeToken(
+                    token: token,
+                    environment: Config.environment,
+                    tokenTypeHint: hint
+                )
+            } else {
+                try await krdpassAuth.revokeToken(token: token)
+            }
+        }
+    }
+
     // MARK: - User Info
-    
+
     func fetchUserInfo() async {
-        guard let accessToken = tokens?.accessToken else { return }
-        
+        guard tokens != nil else { return }
+
         isLoading = true
         errorMessage = nil
-        
+
         do {
+            // Every call that carries the access token goes through this rather than
+            // `tokens?.accessToken`, so expiry is handled where the token is used instead of
+            // by a button the user has to remember to press.
+            let accessToken = try await validAccessToken()
             let info = try await krdpassAuth.getUserInfo(accessToken: accessToken)
             self.userInfo = info
-            flashMessage("✅ User Info Synced")
+            flashMessage(.ok("User info synced"))
             self.isLoading = false
         } catch {
-            flashMessage("❌ Sync Failed: \(error.localizedDescription)")
+            flashMessage(.failed("Sync failed: \(error.localizedDescription)"))
             self.isLoading = false
         }
     }
-    
+
+    /// The access token to send with the next API call, refreshed first if it has expired.
+    ///
+    /// `KrdpassTokenResult.isExpired(skewSeconds:)` compares `receivedAt + expiresIn`
+    /// against now, with a skew allowance so a token that dies mid-flight does not slip
+    /// through. This is the one thing every production integration needs and the one thing
+    /// a "tap to refresh" button never demonstrates.
+    private func validAccessToken() async throws -> String {
+        guard let current = tokens else {
+            throw SignInError(message: "Not signed in.")
+        }
+        guard current.isExpired() else { return current.accessToken }
+        guard let refreshToken = current.refreshToken else {
+            // No offline_access scope, so there is nothing to refresh with. Sign in again.
+            throw SignInError(message: "Session expired. Sign in again.")
+        }
+        let refreshed = try await refreshedTokens(using: refreshToken)
+        self.tokens = refreshed
+        return refreshed.accessToken
+    }
+
+    /// Exchange a refresh token for a new token set, via the backend or the SDK.
+    private func refreshedTokens(using refreshToken: String) async throws -> KrdpassTokenResult {
+        guard useServerMode else {
+            return try await krdpassAuth.refreshTokens(refreshToken: refreshToken)
+        }
+        let response = try await backendService.refreshToken(
+            refreshToken: refreshToken,
+            environment: Config.environment
+        )
+        return try Self.tokenResult(from: response)
+    }
+
     // MARK: - Clear Error
-    
+
     func clearError() {
         errorMessage = nil
+        installUrl = nil
     }
-    
+
     /// Get decoded ID token claims (display only, NOT signature-verified).
     var idTokenClaims: [String: Any] {
         guard let idToken = tokens?.idToken else { return [:] }
@@ -189,18 +306,18 @@ final class AuthViewModel {
         guard let accessToken = tokens?.accessToken else { return [:] }
         return (try? krdpassAuth.decodeTokenUnverified(accessToken)) ?? [:]
     }
-    
+
     // MARK: - User Details (Data Logic)
-    
+
     /// Merged claims from UserInfo (preferred) or ID Token
     private var claims: [String: Any] {
-        userInfo?.raw ?? idTokenClaims
+        userInfo?.rawJsonObject ?? idTokenClaims
     }
-    
+
     var firstName: String {
         userInfo?.citizenFirst ?? claims["citizen_first"] as? String ?? ""
     }
-    
+
     var fullName: String {
         userInfo?.citizenFullName ?? {
             let parts = [
@@ -209,38 +326,38 @@ final class AuthViewModel {
                 claims["citizen_third"] as? String,
                 claims["citizen_surname"] as? String
             ].compactMap { $0 }.filter { !$0.isEmpty }
-            
+
             if parts.isEmpty {
                 return claims["upn"] as? String ?? "Citizen User"
             }
             return parts.joined(separator: " ")
         }()
     }
-    
+
     var email: String {
         userInfo?.email ?? claims["email"] as? String ?? claims["upn"] as? String ?? "No email"
     }
-    
+
     var birthdate: String? {
         userInfo?.birthdate ?? claims["birthdate"] as? String
     }
-    
+
     var sex: String? {
         userInfo?.sexAtBirth ?? claims["sex_at_birth"] as? String
     }
-    
+
     var profilePicUrl: String? {
         userInfo?.picture ?? claims["citizen_profile_picture"] as? String
     }
-    
+
     // MARK: - Token Management Actions
-    
-    var actionMessage: String?
+
+    var actionMessage: ActionMessage?
     private var actionMessageToken = 0
 
     /// Show a transient status message that auto-clears after 3s. A monotonic token guards the
     /// clear, so a newer message is never wiped early by an earlier call's timer.
-    private func flashMessage(_ message: String) {
+    private func flashMessage(_ message: ActionMessage) {
         actionMessage = message
         actionMessageToken += 1
         let token = actionMessageToken
@@ -253,7 +370,7 @@ final class AuthViewModel {
     func verifyToken() async {
         guard !isLoading else { return }
         guard let idToken = tokens?.idToken else {
-            flashMessage("❌ No ID Token to verify")
+            flashMessage(.failed("No ID token to verify"))
             return
         }
         isLoading = true
@@ -261,79 +378,69 @@ final class AuthViewModel {
         do {
             // Verify signature using JWKS (audience is derived from the configured clientId)
             let _ = try await krdpassAuth.verifyToken(idToken: idToken)
-            flashMessage("✅ Token Signature Valid")
+            flashMessage(.ok("Token signature valid"))
         } catch {
-            flashMessage("❌ Invalid: \(error.localizedDescription)")
+            flashMessage(.failed("Invalid: \(error.localizedDescription)"))
         }
         isLoading = false
     }
-    
+
+    /// Refresh on demand, so the demo can show the exchange happening.
+    ///
+    /// Real code should not need this button: `validAccessToken()` above refreshes on expiry
+    /// at the point of use, which is where it belongs.
     func refreshToken() async {
         guard !isLoading else { return }
         guard let token = tokens?.refreshToken else {
-            flashMessage("❌ No Refresh Token available")
+            flashMessage(.failed("No refresh token available"))
             return
         }
         isLoading = true
         actionMessage = nil
         do {
-            let newTokens: KrdpassTokenResult
-            
-            if useServerMode {
-                // Server mode: proxy via backend
-                let response = try await backendService.refreshToken(
-                    refreshToken: token,
-                    environment: Config.environment
-                )
-                newTokens = KrdpassTokenResult(dictionary: response.asDictionary) ?? KrdpassTokenResult(
-                    accessToken: response.accessToken,
-                    idToken: response.idToken,
-                    tokenType: response.tokenType ?? "Bearer",
-                    expiresIn: response.expiresIn ?? 3600,
-                    refreshToken: response.refreshToken,
-                    scope: response.scope
-                )
-            } else {
-                // Client mode: direct SDK call
-                newTokens = try await krdpassAuth.refreshTokens(refreshToken: token)
-            }
-            
-            self.tokens = newTokens
-            flashMessage("✅ Tokens Refreshed")
+            self.tokens = try await refreshedTokens(using: token)
+            flashMessage(.ok("Tokens refreshed"))
         } catch {
-            flashMessage("❌ Refresh Failed: \(error.localizedDescription)")
+            flashMessage(.failed("Refresh failed: \(error.localizedDescription)"))
         }
         isLoading = false
     }
-    
+
+    /// Revoke the session's tokens. The refresh token is the one that matters: it is the
+    /// long-lived credential, and revoking it is what actually ends the grant.
     func revokeToken() async {
         guard !isLoading else { return }
-        guard let token = tokens?.accessToken else {
-            flashMessage("❌ No Access Token to revoke")
+        guard let session = tokens else {
+            flashMessage(.failed("No token to revoke"))
             return
         }
         isLoading = true
         actionMessage = nil
         do {
-            if useServerMode {
-                // Server mode: proxy via backend
-                try await backendService.revokeToken(
-                    token: token,
-                    environment: Config.environment,
-                    tokenTypeHint: "access_token"
-                )
-            } else {
-                // Client mode: direct SDK call
-                try await krdpassAuth.revokeToken(token: token)
-            }
-            
-            logout()
-            flashMessage("✅ Token Revoked (Logged Out)")
+            try await revokeSessionTokens(session)
+            clearSession()
+            flashMessage(.ok("Tokens revoked, signed out"))
         } catch {
-            flashMessage("❌ Revoke Failed: \(error.localizedDescription)")
+            flashMessage(.failed("Revoke failed: \(error.localizedDescription)"))
         }
         isLoading = false
     }
+}
+
+// MARK: - Action Message
+
+/// A transient status line for the token-management actions.
+///
+/// `ok` is the state; `text` is only ever text. Keep them separate: encoding "this failed"
+/// into the string (a prefix, an icon, a marker character) forces the view to parse the
+/// message back apart, and that parser is wrong the first time a message legitimately
+/// starts with the marker.
+struct ActionMessage {
+    let ok: Bool
+    let text: String
+
+    static func ok(_ text: String) -> ActionMessage { ActionMessage(ok: true, text: text) }
+    static func failed(_ text: String) -> ActionMessage { ActionMessage(ok: false, text: text) }
 }
 
 // MARK: - Errors

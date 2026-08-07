@@ -23,19 +23,34 @@ if (hasKeystoreProperties) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
-// Load app configuration (backend URLs, etc.)
+// Load app configuration (backend URLs, etc.).
+//
+// Fail the build, not the app. Treating this file as optional produced an APK that installed
+// fine, started, and then died on a require() in MainActivity, which is the worst place to
+// learn that a config file is missing.
 val configProperties = Properties()
 val configPropertiesFile = listOf(
     File(rootDir, "config.properties"),
     File(exampleRootDir, "config.properties"),
 ).firstOrNull { it.exists() } ?: File(exampleRootDir, "config.properties")
-if (configPropertiesFile.exists()) {
-    configPropertiesFile.inputStream().use { configProperties.load(it) }
-}
 
-val backendUrlValue = configProperties.getProperty("backendUrl", "")
-val redirectUriValue = configProperties.getProperty("redirectUri", "")
-val clientIdValue = configProperties.getProperty("clientId", "")
+// Same wording as the Flutter, iOS and React Native samples: what is missing, which file
+// supplies it, and how to generate it.
+fun missingConfig(what: String): Nothing = error(
+    "KRDPASS demo config missing: $what. Copy android/config.properties.example to " +
+        "android/config.properties and fill it in, or run ./scripts/sync-secrets.sh from the " +
+        "repository root."
+)
+
+if (!configPropertiesFile.exists()) missingConfig("android/config.properties")
+configPropertiesFile.inputStream().use { configProperties.load(it) }
+
+fun requiredConfig(key: String): String =
+    configProperties.getProperty(key).orEmpty().trim().ifEmpty { missingConfig(key) }
+
+val backendUrlValue = requiredConfig("backendUrl")
+val redirectUriValue = requiredConfig("redirectUri")
+val clientIdValue = requiredConfig("clientId")
 val environmentValue = configProperties.getProperty("environment", "development")
 
 android {
@@ -47,10 +62,8 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.4.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
         // Inject configuration from config.properties into BuildConfig
         buildConfigField("String", "BACKEND_URL", "\"$backendUrlValue\"")
         buildConfigField("String", "REDIRECT_URI", "\"$redirectUriValue\"")
@@ -119,14 +132,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.okhttp)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
     // KRDPASS Android SDK, resolved from Maven Central, or substituted from a local SDK
     // checkout when the composite-build override in settings.gradle.kts is active.
-    implementation("krd.pass:krdpass-auth:1.3.0")
+    implementation("krd.pass:krdpass-auth:1.4.0")
 }

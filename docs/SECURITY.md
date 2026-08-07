@@ -2,12 +2,10 @@
 
 ## Supported Versions
 
-We take security seriously and actively maintain the following versions with security updates:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.3.x   | :white_check_mark: |
-| < 1.3   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| 1.3.x   | Yes       |
+| < 1.3   | No        |
 
 ## Reporting a Vulnerability
 
@@ -41,33 +39,54 @@ When reporting a security vulnerability, please include:
 
 ### For Users of the SDKs
 
-- Always use the latest version of each SDK
-- Validate all input and output data
-- Implement proper error handling
-- Use HTTPS for all network communications
-- Store sensitive data securely
-- Keep your app's dependencies up to date
-- Treat `../server` as dev-only reference code
+**No SDK persists tokens.** That is deliberate: the SDK returns tokens to you
+and forgets them, so it never becomes the component that chose your storage.
+You have to persist a refresh token somewhere, and the default choices on both
+platforms are readable on a rooted or jailbroken device and are included in
+cloud backups. Use these instead:
 
-### For Contributors
+| Platform | Use | Not |
+|---|---|---|
+| Android | Encrypt with a key held in the Android Keystore | `SharedPreferences`, files in `getFilesDir()` |
+| iOS | Keychain with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | `UserDefaults`, plist files |
+| Flutter | `flutter_secure_storage` with `IOSOptions(accessibility: .first_unlock_this_device)`; the default `AndroidOptions()` is correct as of 10.x | `shared_preferences` |
+| React Native | `expo-secure-store` or `react-native-keychain` | `AsyncStorage` |
 
-- Follow secure coding practices
-- Validate all inputs and outputs
-- Use parameterized queries when applicable
-- Implement proper error handling
-- Avoid logging sensitive information
-- Keep dependencies up to date
+On Android, do not reach for `androidx.security:security-crypto`
+(`EncryptedSharedPreferences`, `MasterKey`). Every API in that library was
+deprecated in 1.1.0 in favour of the platform APIs and direct Android Keystore
+use, so it should not be adopted for new work.
 
-## Security Features
+The `ThisDeviceOnly` suffix on iOS is what keeps the item out of iCloud Keychain
+sync. Without it the refresh token leaves the device.
 
-The KRDPASS SDKs include several security features:
+Beyond storage:
 
-- **PKCE (Proof Key for Code Exchange)**: Prevents authorization code interception
-- **Pushed Authorization Requests (PAR)**: Securely initiates authorization requests
-- **State Parameter**: Prevents CSRF attacks
-- **HTTPS Only**: All communication is encrypted
-- **Input Validation**: Validates all input parameters
-- **Safe Logging**: Production-safe logging controls (no sensitive data logged)
+- Pin the SDK to a released tag or Maven version, and read the CHANGELOG before
+  moving. Do not track a branch.
+- Send the `state` your backend's PAR call returned. Every SDK fails closed on a
+  blank or mismatched `state`; do not work around that.
+- Treat `../server` as dev-only reference code. It is a correct reference
+  implementation, not a hardened deployment: read
+  [`../server/README.md`](../server/README.md) before adapting it.
+- Set `ALLOWED_REDIRECT_HOSTS` if you adapt the reference BFF. It is required:
+  the server refuses to start without it, and an empty allowlist rejects every
+  `redirectUri`.
+
+### Working In This Repository
+
+- Do not log response bodies from CAS. A non-2xx from `/connect/userinfo`
+  carries citizen claims.
+- Do not commit anything `scripts/sync-secrets.sh` writes. It defaults to
+  leaving tracked files alone; if you pass `--patch-tracked`, check
+  `git status` before committing.
+
+SDK-side policy (API compatibility baselines, cross-platform message parity,
+redirect-validation vectors) lives in each SDK repository, next to the code and
+the tests that enforce it. It is not restated here, because a copy in this
+repository would only drift.
+
+## Protocol Guarantees
 
 ### Native Caller and Redirect Trust
 
@@ -101,18 +120,25 @@ from the mobile client. See
 
 ### Sensitive Data Protection
 
-The SDKs are designed to never log sensitive information:
+Android, iOS and Flutter redact tokens, authorization codes and PKCE values in
+the string representation of their result types, so an accidental
+`print(tokens)` does not leak them:
 
-- **Authorization Codes**: Never logged or exposed in toString()
-- **Access Tokens**: Redacted in toString() methods
-- **PKCE Values**: Redacted in toString() methods
-- **OAuth URLs**: Sanitized in log messages
-- **Client Credentials**: Not stored or logged
+- **Authorization Codes**: redacted (`AuthResult.Success`, `AuthResponse`)
+- **Access and refresh tokens**: redacted (`KrdpassTokenResult`)
+- **PKCE values**: redacted (`PkcePair`)
+- **Client credentials**: never stored, never logged
+
+**React Native is the exception.** Its result types are plain TypeScript
+interfaces with no custom `toString`, so `console.log(tokens)` prints the raw
+access token. Redact at the call site in React Native apps.
+
+None of the SDKs logs anything unless you install a logger, and React Native
+has no logging hook at all, so it never logs. No SDK logs an OAuth URL with
+its query string attached.
 
 ## Contact
 
 For security-related questions or concerns:
 - Email: security@pass.krd
 - General Support: integration@pass.krd
-
-Release governance policy is documented in `../.github/RELEASE_GOVERNANCE.md`.

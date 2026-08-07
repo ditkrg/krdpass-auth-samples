@@ -1,3 +1,4 @@
+import { makeTokenResult } from 'krdpass-auth-react-native';
 import type {
   KrdpassEnvironment,
   KrdpassTokenResult,
@@ -85,7 +86,10 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return (await response.json()) as KrdpassTokenResult;
+    // makeTokenResult, not a cast: the BFF's JSON has no receivedAt and no isExpired,
+    // so casting it to KrdpassTokenResult compiles and then throws at the first
+    // isExpired() call. The SDK stamps receipt time on this device.
+    return makeTokenResult(await response.json());
   }
 
   static async refreshToken(params: {
@@ -101,17 +105,23 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return (await response.json()) as KrdpassTokenResult;
+    // makeTokenResult, not a cast: the BFF's JSON has no receivedAt and no isExpired,
+    // so casting it to KrdpassTokenResult compiles and then throws at the first
+    // isExpired() call. The SDK stamps receipt time on this device.
+    return makeTokenResult(await response.json());
   }
 
   static async revokeToken(params: {
     environment: KrdpassEnvironment;
     token: string;
+    /**
+     * Which token is being revoked. Defaulting this to 'access_token' meant the refresh
+     * token was never revocable through here, so a "sign out" left the long-lived
+     * credential valid server-side.
+     */
+    tokenTypeHint: 'access_token' | 'refresh_token';
   }): Promise<void> {
-    const response = await postJson(`${BACKEND_URL}/oauth/token/revoke`, {
-      ...params,
-      tokenTypeHint: 'access_token',
-    });
+    const response = await postJson(`${BACKEND_URL}/oauth/token/revoke`, params);
     if (!response.ok) {
       throw new Error(await describeError(response));
     }

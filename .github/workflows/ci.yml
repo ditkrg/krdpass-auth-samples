@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # No branch filter: PRs here target dev as often as main, and a filtered
+  # pull_request event runs nothing at all rather than failing loudly.
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -59,11 +60,11 @@ jobs:
       # Covers single-use state, PKCE re-derivation and id_token verification.
       - run: npm test
 
-  # These jobs build against the published 1.3.0 release set. They run when the
-  # AUTH_V2_RELEASED repository variable is set to true.
+  # These jobs build the samples against the SDK versions their manifests pin.
+  # They must stay ungated: a sample that is not built by CI is a sample that is
+  # not known to compile.
   android:
     name: Android sample
-    if: ${{ vars.AUTH_V2_RELEASED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -78,11 +79,13 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      # config.properties is gitignored and the build now fails without it, the same way
+      # the Flutter sample needs a .env. The example values are enough to compile.
+      - run: cp config.properties.example config.properties
       - run: ./gradlew :app:assembleDebug
 
   flutter:
     name: Flutter sample
-    if: ${{ vars.AUTH_V2_RELEASED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -106,7 +109,6 @@ jobs:
 
   ios:
     name: iOS samples
-    if: ${{ vars.AUTH_V2_RELEASED == 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     defaults:
@@ -153,7 +155,6 @@ jobs:
 
   react-native:
     name: React Native sample
-    if: ${{ vars.AUTH_V2_RELEASED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -175,7 +176,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
       - run: npm ci
       - run: npm run doctor
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
       - run: ./gradlew :app:assembleDebug
         working-directory: react-native/android
         env:
@@ -183,7 +184,6 @@ jobs:
 
   react-native-bare:
     name: Bare React Native sample
-    if: ${{ vars.AUTH_V2_RELEASED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:

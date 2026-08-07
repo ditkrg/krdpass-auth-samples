@@ -2,8 +2,12 @@ package krd.pass.auth.demo.network
 
 import krd.pass.auth.KrdpassTokenResult
 
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
@@ -25,15 +29,20 @@ data class ParResponse(
 
 /**
  * AuthBackendService: Handles communication with your application's backend.
- * 
+ *
  * In a production environment, your app should NOT talk directly to the KRDPASS
- * Identity Provider for sensitive operations like token exchange. Instead, 
+ * Identity Provider for sensitive operations like token exchange. Instead,
  * these should go through your backend to keep client secrets secure.
  */
 class AuthBackendService(
     private val backendUrl: String,
     private val httpClient: OkHttpClient = OkHttpClient()
 ) {
+    private companion object {
+        /** OAuth's own fallback when a token response omits expires_in. */
+        const val DEFAULT_EXPIRES_IN_SECONDS = 3600
+    }
+
     private val jsonMediaType = "application/json".toMediaType()
 
     /**
@@ -65,10 +74,10 @@ class AuthBackendService(
 
         val responseBody = makeRequest(request)
         val json = JSONObject(responseBody)
-        
+
         return ParResponse(
-            requestUri = json.optString("requestUri", json.optString("request_uri")),
-            expiresIn = if (json.has("expiresIn")) json.optInt("expiresIn") else if (json.has("expires_in")) json.optInt("expires_in") else null,
+            requestUri = json.optString("requestUri"),
+            expiresIn = if (json.has("expiresIn")) json.optInt("expiresIn") else null,
             state = json.optString("state").takeIf { json.has("state") }
         )
     }
@@ -96,14 +105,7 @@ class AuthBackendService(
         val responseBody = makeRequest(request)
         val json = JSONObject(responseBody)
 
-        return KrdpassTokenResult.fromMap(mapOf(
-            "accessToken" to json.optString("accessToken", json.optString("access_token")),
-            "tokenType" to json.optString("tokenType", json.optString("token_type", "Bearer")),
-            "expiresIn" to (if (json.has("expiresIn")) json.optInt("expiresIn") else if (json.has("expires_in")) json.optInt("expires_in") else null),
-            "refreshToken" to json.optString("refreshToken", json.optString("refresh_token")).takeIf { it.isNotBlank() },
-            "idToken" to json.optString("idToken", json.optString("id_token")).takeIf { it.isNotBlank() },
-            "scope" to json.optString("scope").takeIf { json.has("scope") }
-        ))
+        return parseTokens(json)
     }
 
     /**
@@ -134,14 +136,7 @@ class AuthBackendService(
         val responseBody = makeRequest(request)
         val json = JSONObject(responseBody)
 
-        return KrdpassTokenResult.fromMap(mapOf(
-            "accessToken" to json.optString("accessToken", json.optString("access_token")),
-            "tokenType" to json.optString("tokenType", json.optString("token_type", "Bearer")),
-            "expiresIn" to (if (json.has("expiresIn")) json.optInt("expiresIn") else if (json.has("expires_in")) json.optInt("expires_in") else null),
-            "refreshToken" to json.optString("refreshToken", json.optString("refresh_token")).takeIf { it.isNotBlank() },
-            "idToken" to json.optString("idToken", json.optString("id_token")).takeIf { it.isNotBlank() },
-            "scope" to json.optString("scope").takeIf { json.has("scope") }
-        ))
+        return parseTokens(json)
     }
 
     /**
@@ -170,6 +165,25 @@ class AuthBackendService(
 
         makeRequest(request)
     }
+
+    /**
+     * Parse a token response from the BFF.
+     *
+     * camelCase only. `../server` is the contract this sample is written against and it
+     * returns camelCase (see its /oauth/token and /oauth/token/refresh handlers). Also
+     * accepting snake_case would only hide the day the two stop agreeing.
+     */
+    private fun parseTokens(json: JSONObject): KrdpassTokenResult = KrdpassTokenResult(
+        accessToken = json.optString("accessToken"),
+        idToken = json.optString("idToken").takeIf { it.isNotBlank() },
+        tokenType = json.optString("tokenType", "Bearer"),
+        expiresIn = json.optInt("expiresIn", DEFAULT_EXPIRES_IN_SECONDS),
+        refreshToken = json.optString("refreshToken").takeIf { it.isNotBlank() },
+        scope = json.optString("scope").takeIf { json.has("scope") },
+        // receivedAt defaults to now. Leave it: it is a stamp from THIS device's clock, and
+        // isExpired() compares receivedAt + expiresIn against this device's clock too. A
+        // backend-supplied value would mix two clocks.
+    )
 
     /**
      * Helper to perform asynchronous network requests using OkHttp and Coroutines.

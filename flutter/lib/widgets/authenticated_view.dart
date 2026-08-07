@@ -3,6 +3,7 @@ import 'package:demo_krdpass_auth/theme.dart';
 import 'package:demo_krdpass_auth/widgets/personal_details_section.dart';
 import 'package:demo_krdpass_auth/widgets/developer_console.dart';
 import 'package:demo_krdpass_auth/widgets/official_citizen_card.dart';
+import 'package:demo_krdpass_auth/models/action_message.dart';
 import 'package:flutter/material.dart';
 import 'package:krdpass_auth_flutter/krdpass_auth_flutter.dart';
 
@@ -16,7 +17,7 @@ class AuthenticatedView extends StatefulWidget {
   final VoidCallback onVerifyToken;
   final VoidCallback onRefreshToken;
   final VoidCallback onRevokeToken;
-  final String? actionMessage;
+  final ActionMessage? actionMessage;
 
   const AuthenticatedView({
     this.authToken,
@@ -76,7 +77,7 @@ class _AuthenticatedViewState extends State<AuthenticatedView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Pinned Header (Outside scroll, like Android)
+        // Pinned header, outside the scroll view.
         Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Row(
@@ -146,7 +147,6 @@ class _AuthenticatedViewState extends State<AuthenticatedView> {
 
                 // User Info Protocol (Sync)
                 DeveloperConsole(
-                  userInfoReceived: widget.userInfo != null,
                   isLoading: widget.isLoadingUserInfo,
                   onFetchUserInfo: widget.onFetchUserInfo,
                   idClaims: _idClaims,
@@ -156,7 +156,7 @@ class _AuthenticatedViewState extends State<AuthenticatedView> {
 
                 const SizedBox(height: 16),
 
-                // Token Management Actions (Now at the bottom like Android)
+                // Token management actions.
                 TokenManagementCard(
                   onVerifyToken: widget.onVerifyToken,
                   onRefreshToken: widget.onRefreshToken,
@@ -178,7 +178,7 @@ class TokenManagementCard extends StatelessWidget {
   final VoidCallback onVerifyToken;
   final VoidCallback onRefreshToken;
   final VoidCallback onRevokeToken;
-  final String? actionMessage;
+  final ActionMessage? actionMessage;
 
   const TokenManagementCard({
     required this.onVerifyToken,
@@ -222,28 +222,32 @@ class TokenManagementCard extends StatelessWidget {
             ),
             if (actionMessage != null) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 14,
-                    color: Theme.of(
-                      context,
-                    ).extension<KrdpassThemeColors>()!.caption,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      actionMessage!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).extension<KrdpassThemeColors>()!.caption,
+              // The kind drives the icon and the colour; the text is only text.
+              Builder(
+                builder: (context) {
+                  final message = actionMessage!;
+                  final tint = message.ok
+                      ? Theme.of(context).extension<KrdpassThemeColors>()!.caption
+                      : Theme.of(context).colorScheme.error;
+                  return Row(
+                    children: [
+                      Icon(
+                        message.ok
+                            ? Icons.info_outline_rounded
+                            : Icons.warning_amber_rounded,
+                        size: 14,
+                        color: tint,
                       ),
-                    ),
-                  ),
-                ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          message.text,
+                          style: TextStyle(fontSize: 12, color: tint),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
             const SizedBox(height: 16),

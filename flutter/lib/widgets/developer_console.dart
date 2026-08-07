@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:krdpass_auth_flutter/krdpass_auth_flutter.dart';
 
 class DeveloperConsole extends StatelessWidget {
-  final bool userInfoReceived;
   final bool isLoading;
   final VoidCallback onFetchUserInfo;
   final Map<String, dynamic> idClaims;
@@ -11,7 +10,6 @@ class DeveloperConsole extends StatelessWidget {
   final KrdpassUserInfo? userInfo;
 
   const DeveloperConsole({
-    required this.userInfoReceived,
     required this.isLoading,
     required this.onFetchUserInfo,
     required this.idClaims,

@@ -4,7 +4,11 @@
  * This service mirrors the Flutter AuthBackendService and communicates with
  * a backend server that handles PAR and token exchange on behalf of the client.
  */
-import type { KrdpassEnvironment } from 'krdpass-auth-react-native';
+import { makeTokenResult } from 'krdpass-auth-react-native';
+import type {
+  KrdpassEnvironment,
+  KrdpassTokenResult,
+} from 'krdpass-auth-react-native';
 
 import { BACKEND_URL } from '../config';
 
@@ -14,14 +18,10 @@ export interface ParResponse {
   state?: string;
 }
 
-export interface TokenResult {
-  accessToken: string;
-  idToken?: string;
-  refreshToken?: string;
-  expiresIn: number;
-  tokenType: string;
-  scope?: string;
-}
+// No local TokenResult interface here. Re-declaring the SDK's shape by hand dropped
+// `receivedAt` and `isExpired()`, the two members expiry handling needs, and a
+// `response.json()` cast hid the loss from the compiler. makeTokenResult stamps receivedAt
+// from this device's clock and attaches isExpired().
 
 /**
  * Turn a failed HTTP response into a human-readable message. Prefers the OAuth
@@ -119,7 +119,7 @@ export class AuthBackendService {
     code: string;
     state: string;
     codeVerifier: string;
-  }): Promise<TokenResult> {
+  }): Promise<KrdpassTokenResult> {
     const response = await postJson(`${BACKEND_URL}/oauth/token`, {
       code: params.code,
       state: params.state,
@@ -130,7 +130,7 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return await response.json();
+    return makeTokenResult(await response.json());
   }
 
   /**
@@ -140,7 +140,7 @@ export class AuthBackendService {
     refreshToken: string;
     environment: KrdpassEnvironment;
     scope?: string;
-  }): Promise<TokenResult> {
+  }): Promise<KrdpassTokenResult> {
     const environment = params.environment;
     const body = {
       refreshToken: params.refreshToken,
@@ -154,7 +154,7 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return await response.json();
+    return makeTokenResult(await response.json());
   }
 
   /**
@@ -163,7 +163,11 @@ export class AuthBackendService {
   static async revokeToken(params: {
     token: string;
     environment: KrdpassEnvironment;
-    tokenTypeHint?: string;
+    /**
+     * Which token is being revoked. A "sign out" has to revoke the refresh token, not just
+     * the access token: the refresh token is the credential that keeps working afterwards.
+     */
+    tokenTypeHint?: 'access_token' | 'refresh_token';
   }): Promise<void> {
     const environment = params.environment;
     const body = {

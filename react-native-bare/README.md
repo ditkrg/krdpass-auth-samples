@@ -22,7 +22,7 @@ values. For a clean build that must leave tracked native settings untouched, use
 
 ## Install and run
 
-This sample targets React Native SDK `v1.3.0` and Android core `1.3.0`,
+This sample targets React Native SDK `v1.4.0` and Android core `1.4.0`,
 both installed from the published release.
 
 ```bash

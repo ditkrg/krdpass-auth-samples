@@ -11,25 +11,25 @@ import SwiftUI
 enum KrdpassColors {
     // Primary brand color
     static let primary = Color(hex: 0x00AAFF)
-    
+
     // Success/Verified color
     static let success = Color(hex: 0x00CE2A)
-    
+
     // Error color
     static let error = Color(hex: 0xFF001D)
-    
+
     // Background colors
     static let backgroundLight = Color.white
     static let backgroundDark = Color(hex: 0x121212)
-    
+
     // Surface colors
     static let surfaceLight = Color(hex: 0xF1FAFF)
     static let surfaceDark = Color(hex: 0x1E1E1E)
-    
+
     // Caption/Secondary text
     static let captionLight = Color(hex: 0x5F6368)
     static let captionDark = Color(hex: 0xB8BDC4)
-    
+
     // Line/Divider color
     static let line = Color(hex: 0xCDD6DE)
 

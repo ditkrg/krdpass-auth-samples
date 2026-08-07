@@ -42,12 +42,16 @@ Or run and sync in one step:
 - `android/config.properties` (Android target only)
 - `flutter/.env`
 - `react-native/.env`
-- By default (`PATCH_TRACKED_DEMO_FILES=true`): tracked sample project files are patched with your local values:
-  - Associated domains from `REDIRECT_URI`
-  - Android sample package IDs from `DEMO_ANDROID_PACKAGE_NAME`
-  - iOS sample bundle IDs from `DEMO_IOS_BUNDLE_ID`
-  - iOS signing team IDs from `DEMO_IOS_TEAM_ID` (when provided)
-- Set `PATCH_TRACKED_DEMO_FILES=false` if you want sync to skip tracked-file edits.
+Tracked sample project files are left alone by default
+(`PATCH_TRACKED_DEMO_FILES=false`, equivalently `--no-patch-tracked`), because
+patching them leaves your clone dirty and can stage your own client id.
+
+Opt in with `--patch-tracked` (or `PATCH_TRACKED_DEMO_FILES=true`) to also rewrite:
+
+- Associated domains from `REDIRECT_URI`
+- Android sample package IDs from `DEMO_ANDROID_PACKAGE_NAME`
+- iOS sample bundle IDs from `DEMO_IOS_BUNDLE_ID`
+- iOS signing team IDs from `DEMO_IOS_TEAM_ID` (when provided)
 
 ## Required Values By Target
 

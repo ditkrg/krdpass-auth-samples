@@ -13,12 +13,12 @@ struct DashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showDeveloperConsole = false
     @State private var showUserInfoProtocol = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
             headerSection
-            
+
             ScrollView {
                 VStack(spacing: 0) {
                     // Identity Card
@@ -41,24 +41,24 @@ struct DashboardView: View {
             }
         }
     }
-    
+
     // MARK: - Header
-    
+
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Welcome,")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                
+
                 Text(viewModel.firstName.isEmpty ? "Citizen" : viewModel.firstName)
                     .font(.system(size: 24, weight: .black))
             }
-            
+
             Spacer()
-            
+
             Button {
-                viewModel.logout()
+                Task { await viewModel.logout() }
             } label: {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
                     .font(.system(size: 18))
@@ -71,36 +71,36 @@ struct DashboardView: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
     }
-    
+
     // MARK: - Identity Card
-    
+
     private var identityCard: some View {
         VStack(spacing: 20) {
             HStack(alignment: .top, spacing: 16) {
                 // Profile Image
                 profileImage
-                
+
                 // Name and Email
                 VStack(alignment: .leading, spacing: 2) {
                     Text(viewModel.fullName)
                         .font(.system(size: 18, weight: .bold))
                         .lineLimit(2)
-                    
+
                     Text(viewModel.email)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
             }
-            
+
             // Verification Badge
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(KrdpassColors.success)
                     .font(.caption)
-                
+
                 Text("Official Verified Citizen")
                     .font(.caption2)
                     .fontWeight(.bold)
@@ -123,13 +123,13 @@ struct DashboardView: View {
                 .stroke(Color(.separator).opacity(0.5), lineWidth: 1)
         )
     }
-    
+
     private var profileImage: some View {
         ZStack {
             Circle()
                 .fill(KrdpassColors.primary.opacity(0.1))
                 .frame(width: 56, height: 56)
-            
+
             if let urlString = viewModel.profilePicUrl, let url = URL(string: urlString) {
                 AsyncImage(url: url) { image in
                     image
@@ -149,23 +149,23 @@ struct DashboardView: View {
             }
         }
     }
-    
+
     // MARK: - Token Management Section (See below)
 
     // MARK: - Personal Details
-    
+
     private var personalDetailsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Personal Details")
                 .font(.system(size: 16, weight: .bold))
-            
+
             HStack(spacing: 12) {
                 PersonalDetailCard(
                     icon: "calendar",
                     label: "Birth Date",
                     value: viewModel.birthdate ?? "N/A"
                 )
-                
+
                 PersonalDetailCard(
                     icon: "person.crop.circle",
                     label: "Gender",
@@ -174,9 +174,9 @@ struct DashboardView: View {
             }
         }
     }
-    
+
     // MARK: - User Info Protocol Section
-    
+
     private var userInfoProtocolSection: some View {
         VStack(spacing: 0) {
             Button {
@@ -187,27 +187,27 @@ struct DashboardView: View {
                 HStack {
                     Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
                         .foregroundColor(KrdpassColors.primary)
-                    
+
                     Text("Remote User Info Protocol")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.primary)
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: showUserInfoProtocol ? "chevron.up" : "chevron.down")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .padding(16)
             }
-            
+
             if showUserInfoProtocol {
                 VStack(spacing: 16) {
                     Text("Fetch the latest profile data directly from the OIDC UserInfo endpoint using your Access Token.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    
+
                     // Sync User Info Button
                     Button {
                         Task {
@@ -232,7 +232,7 @@ struct DashboardView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .disabled(viewModel.isLoading)
-                    
+
                     if let userInfo = viewModel.userInfo {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
@@ -245,8 +245,8 @@ struct DashboardView: View {
                         .padding(12)
                         .background(KrdpassColors.success.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                        
-                        claimSection(title: "UserInfo Claims", claims: userInfo.raw)
+
+                        claimSection(title: "UserInfo Claims", claims: userInfo.rawJsonObject)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -262,7 +262,7 @@ struct DashboardView: View {
     }
 
     // MARK: - Token Details Section
-    
+
     private var tokenDetailsSection: some View {
         VStack(spacing: 0) {
             Button {
@@ -273,20 +273,20 @@ struct DashboardView: View {
                 HStack {
                     Image(systemName: "key.fill")
                         .foregroundColor(KrdpassColors.primary)
-                    
+
                     Text("Token Details")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.primary)
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: showDeveloperConsole ? "chevron.up" : "chevron.down")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .padding(16)
             }
-            
+
             if showDeveloperConsole {
                 VStack(spacing: 16) {
                     claimSection(title: "ID Token Claims", claims: viewModel.idTokenClaims)
@@ -303,14 +303,14 @@ struct DashboardView: View {
                 .stroke(Color(.separator).opacity(0.3), lineWidth: 1)
         )
     }
-    
+
     private func claimSection(title: String, claims: [String: Any]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(KrdpassColors.primary)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 if claims.isEmpty {
                     Text("No claims available")
@@ -325,7 +325,7 @@ struct DashboardView: View {
                                 .font(.caption2)
                                 .fontWeight(.bold)
                                 .frame(width: 100, alignment: .leading)
-                            
+
                             Text(String(describing: claims[key] ?? ""))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -340,37 +340,38 @@ struct DashboardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
-    
+
     // MARK: - Token Management Section
-    
+
     private var tokenManagementSection: some View {
         VStack(spacing: 0) {
             HStack {
                 Image(systemName: "gearshape.fill")
                     .foregroundColor(KrdpassColors.primary)
-                
+
                     Text("Token Management")
                         .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.primary)
-                
+
                 Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
-            
+
             // Result Message (if any)
             if let message = viewModel.actionMessage {
+                // The kind drives the icon and the colour; the text is only ever text.
                 HStack {
-                    Image(systemName: "info.circle.fill")
+                    Image(systemName: message.ok ? "info.circle.fill" : "exclamationmark.triangle.fill")
                         .font(.caption)
-                    Text(message)
+                    Text(message.text)
                         .font(.caption)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(message.ok ? .secondary : KrdpassColors.error)
                 .padding(.horizontal, 16)
                 .transition(.opacity)
             }
-            
+
             VStack(spacing: 8) {
                 Button {
                     Task { await viewModel.verifyToken() }
@@ -383,7 +384,7 @@ struct DashboardView: View {
                         .foregroundColor(KrdpassColors.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                
+
                 Button {
                     Task { await viewModel.refreshToken() }
                 } label: {
@@ -395,7 +396,7 @@ struct DashboardView: View {
                         .foregroundColor(KrdpassColors.success)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                
+
                 Button {
                     Task { await viewModel.revokeToken() }
                 } label: {
@@ -428,19 +429,19 @@ struct PersonalDetailCard: View {
     let label: String
     let value: String
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 16))
                     .foregroundColor(KrdpassColors.primary.opacity(0.7))
-                
+
                 Text(label)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
-            
+
             Text(value)
                 .font(.system(size: 14, weight: .bold))
                 .lineLimit(1)

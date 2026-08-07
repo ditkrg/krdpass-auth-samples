@@ -8,6 +8,7 @@ import { PersonalDetailCard } from './PersonalDetailCard';
 import { UserInfoProtocolCard } from './UserInfoProtocolCard';
 import { TokenDetailsCard } from './TokenDetailsCard';
 import { TokenManagementCard } from './TokenManagementCard';
+import type { ActionMessage } from './TokenManagementCard';
 import { UI } from '../theme/metrics';
 
 interface LoggedInDashboardProps {
@@ -23,7 +24,7 @@ interface LoggedInDashboardProps {
   onRefreshToken: () => void;
   onRevokeToken: () => void;
   theme: ThemeColors;
-  actionMessage?: string | null;
+  actionMessage?: ActionMessage | null;
 }
 
 export const LoggedInDashboard: React.FC<LoggedInDashboardProps> = ({

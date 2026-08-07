@@ -15,6 +15,9 @@ import { ActionButton } from './DemoUi';
 interface LandingScreenProps {
   loading: boolean;
   error?: string;
+  /** Store listing for KRDPASS, set only for provider_not_installed. */
+  installUrl?: string;
+  onInstallProvider: () => void;
   citizenScope: boolean;
   offlineScope: boolean;
   useServerMode: boolean;
@@ -29,6 +32,8 @@ interface LandingScreenProps {
 export function LandingScreen({
   loading,
   error,
+  installUrl,
+  onInstallProvider,
   citizenScope,
   offlineScope,
   useServerMode,
@@ -69,6 +74,19 @@ export function LandingScreen({
             <View style={styles.errorCopy}>
               <Text style={styles.errorTitle}>Sign-in failed</Text>
               <Text style={styles.errorText}>{error}</Text>
+              {/*
+                provider_not_installed is the only sign-in failure the user can actually
+                fix, and the SDK hands us the URL that fixes it. Offer it as an action
+                instead of ending on an error message.
+              */}
+              {installUrl ? (
+                <Text
+                  accessibilityRole="button"
+                  onPress={onInstallProvider}
+                  style={styles.errorAction}>
+                  Install KRDPASS
+                </Text>
+              ) : null}
             </View>
             <Pressable
               accessibilityLabel="Dismiss error"
@@ -221,6 +239,12 @@ const getStyles = (theme: ThemeColors) =>
       height: 36,
       justifyContent: 'center',
       width: 36,
+    },
+    errorAction: {
+      color: theme.error,
+      fontSize: 13,
+      fontWeight: '700',
+      marginTop: 6,
     },
     errorCopy: {
       flex: 1,

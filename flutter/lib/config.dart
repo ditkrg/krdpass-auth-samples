@@ -1,10 +1,18 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Config {
+  /// Fail on the first missing key, with the same wording every sample in this
+  /// repo uses: what is missing, which file supplies it, and how to generate it.
+  /// A demo that starts against half a config and dies later on a DNS error
+  /// teaches nothing.
   static String _requireEnv(String key) {
     final value = dotenv.env[key];
     if (value == null || value.isEmpty) {
-      throw StateError('Missing required env var: $key');
+      throw StateError(
+        'KRDPASS demo config missing: $key. '
+        'Copy flutter/env.example to flutter/.env and fill it in, '
+        'or run ./scripts/sync-secrets.sh from the repository root.',
+      );
     }
     return value;
   }

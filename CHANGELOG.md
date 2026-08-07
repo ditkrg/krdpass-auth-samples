@@ -1,12 +1,18 @@
 # Changelog
 
-## [1.3.0] - 2026-07-27
+## [1.4.0] - 2026-08-07
+
+- All samples now target SDK 1.4.0.
+- The Node.js BFF gained a `DEMO_UNAUTHENTICATED_TOKEN_ROUTES` opt-in flag: `/oauth/token/refresh` and `/oauth/token/revoke` are registered only when it is set to `true`, and return a plain 404 otherwise.
+- Added a PAR request JSON schema under `shared/contracts/`.
+
+## [1.3.0] - 2026-07-29
 
 Initial public release.
 
-- Android (Kotlin) sample app demonstrating Sign in with KRDPASS.
-- iOS (Swift) sample app using the KRDPASS Swift SDK.
-- Flutter sample app covering server-mediated and client-only flows.
-- React Native (Expo) sample app with Universal Link callback handling.
-- Bare React Native sample app exercising autolinking and Codegen directly.
-- Node.js Backend-for-Frontend (BFF) reference server for PAR and token exchange.
+- Five runnable samples: Android (Kotlin/Compose), iOS (Swift/SwiftUI), Flutter, React
+  Native with Expo, and bare React Native.
+- A Node.js backend-for-frontend reference that performs PAR and the token exchange, for
+  the server-mediated flow.
+- Shared redirect-validation test vectors and request schemas that the SDK repositories
+  validate against.

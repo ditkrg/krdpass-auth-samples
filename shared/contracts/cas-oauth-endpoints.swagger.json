@@ -3,7 +3,7 @@
   "info": {
     "title": "KRDPASS CAS OAuth Endpoints (Used by Example Server)",
     "version": "1.0.0",
-    "description": "Contract for CAS endpoints invoked by server/server.js. Covers PAR, token exchange, token refresh, and token revocation calls made from the example backend to CAS."
+    "description": "Contract for CAS endpoints invoked by server/server.js. Covers PAR, token exchange, token refresh, and token revocation calls made from the example backend to CAS. This file is the canonical source for this contract. The copy published in the developer manual (docs/public/cas-oauth-endpoints.json there) is a mirror and must be updated from here."
   },
   "servers": [
     {

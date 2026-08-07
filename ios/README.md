@@ -13,19 +13,16 @@ Reference iOS app for **Sign in with KRDPASS**.
 
 ## Prerequisites
 
-- Xcode 16+ (Swift 6 toolchain)
-- iOS 15.6+ simulator/device
+- Xcode 26+ (Swift 6.2 toolchain)
+- iOS 17.0+ simulator or device (the sample's deployment target)
 - A running backend that performs PAR + the token exchange for the server-mediated flow (see the protocol reference under "Related Docs")
 - KRDPASS onboarding-approved credentials
 
-## Required Onboarding Inputs
+## Onboarding
 
-- `KRD_CLIENT_ID`
-- `KRD_REDIRECT_URI` (HTTPS)
-- `KRD_BACKEND_URL`
-- `KRD_ENVIRONMENT` (`development` or `production`)
-- iOS bundle identifier + team identifier
-- Associated domain host registered for Universal Links
+You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
+this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
+for what to send to `integration@pass.krd`.
 
 ## Step-by-Step Setup
 

@@ -18,18 +18,25 @@ This is a reference implementation, not a production-ready service.
 - Apply proper auth, rate limits, observability, and secret management before production use.
 - Default bind host is `127.0.0.1` for local development safety.
 
+## Dependencies
+
+None. This reference installs zero packages, production or dev. The HTTP
+server, HTTP client, JSON body parsing, RSA signing and verification, file
+watching, and `.env` loading all come from the Node 24 standard library: a sample
+every integrator installs should not drag a dependency tree of advisories along
+with it. `npm install` here creates no `node_modules`.
+
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 24+ (what CI builds on, and what `engines` requires)
 - Onboarding-approved credentials from KRDPASS
 
-## Required Onboarding Inputs
+## Onboarding
 
-- `CLIENT_ID`
-- `CLIENT_SECRET`
-- RSA private key matching your registered signing key
-- Approved scopes and environment
-- HTTPS redirect URI registered with KRDPASS
+This reference is the confidential half of the flow, so it needs `CLIENT_ID`,
+`CLIENT_SECRET`, the RSA private key matching your registered signing key, your approved
+scopes and environment, and your registered HTTPS redirect URI. See the
+[integration guide](../docs/INTEGRATION.md#onboarding).
 
 ## Step-by-Step Setup
 
@@ -46,17 +53,18 @@ cp .env.example .env
 | `CLIENT_ID` | Yes | OAuth client ID issued during onboarding |
 | `CLIENT_SECRET` | Yes | OAuth client secret issued during onboarding |
 | `RSA_PRIVATE_KEY` | Yes | Full PEM private key (escaped with `\\n` in `.env`) |
+| `ALLOWED_REDIRECT_HOSTS` | Yes | Comma-separated host allowlist for `redirectUri` (e.g. `auth.myapp.gov.krd`). The server refuses to start without it, and an unlisted host is rejected at `/oauth/par`. `.env.example` ships a placeholder so a fresh clone starts; replace it with your registered redirect host. When using `scripts/sync-secrets.sh`, the `REDIRECT_URI` host is auto-appended. |
 | `HOST` | No | Bind host, defaults to `127.0.0.1` |
 | `PORT` | No | Server port, defaults to `3000` |
-| `ALLOWED_REDIRECT_HOSTS` | No (recommended) | Comma-separated host allowlist for `redirectUri` (e.g. `auth.myapp.gov.krd`). When using `scripts/sync-secrets.sh`, the `REDIRECT_URI` host is auto-appended. |
 | `DEFAULT_SCOPE` | No | Default scope used when `/oauth/par` request omits `scope` (default: `openid profile`) |
-| `AUTH_TRANSACTION_TTL_MS` | No | BFF transaction lifetime in ms (default 5 minutes, clamped to 30 seconds–10 minutes and never longer than CAS PAR expiry) |
+| `AUTH_TRANSACTION_TTL_MS` | No | BFF transaction lifetime in ms (default 5 minutes, clamped to 30 seconds to 10 minutes and never longer than CAS PAR expiry) |
 | `OIDC_METADATA_CACHE_TTL_MS` | No | CAS discovery metadata cache lifetime in ms (default 1 hour) |
 | `DEMO_EXTRAS` | No | Set `true` only if serving AASA/assetlinks from this server |
 | `DEMO_IOS_APP_IDS` | If `DEMO_EXTRAS=true` | Comma-separated iOS app IDs (`TEAM_ID.bundle.id`) |
 | `DEMO_IOS_TEAM_ID` + `DEMO_IOS_BUNDLE_ID` | If `DEMO_EXTRAS=true` | Single-app fallback for iOS |
 | `DEMO_ANDROID_APP_LINKS` | If `DEMO_EXTRAS=true` | Comma-separated `package|SHA256` pairs |
 | `DEMO_ANDROID_PACKAGE_NAME` + `DEMO_ANDROID_SHA256` | If `DEMO_EXTRAS=true` | Single-app fallback for Android |
+| `DEMO_UNAUTHENTICATED_TOKEN_ROUTES` | No | Set `true` to register `/oauth/token/refresh` and `/oauth/token/revoke`. Off by default; see the warning below. |
 
 3. Generate RSA private key if needed:
 
@@ -77,6 +85,8 @@ npm install
 npm start
 ```
 
+For a watch-mode restart while editing, use `npm run dev`.
+
 5. Verify health:
 
 ```bash
@@ -87,14 +97,14 @@ curl http://localhost:3000/health
 
 - `POST /oauth/par`
 - `POST /oauth/token`
-- `POST /oauth/token/refresh`
-- `POST /oauth/token/revoke`
+- `POST /oauth/token/refresh` (only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true`)
+- `POST /oauth/token/revoke` (only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true`)
 - `GET /health`
 
 ## Security and Policy Notes
 
 - `redirectUri` is validated as HTTPS.
-- Optional redirect host allowlist can be enforced with `ALLOWED_REDIRECT_HOSTS`.
+- The `ALLOWED_REDIRECT_HOSTS` allowlist is required and fails closed. An empty or unset allowlist rejects every `redirectUri` rather than allowing any HTTPS host, and the server refuses to start without the variable. Without it, a caller could push its own `redirectUri`, have this server sign it with `RSA_PRIVATE_KEY` and authenticate it with `CLIENT_SECRET`, and receive the resulting authorization code itself.
 - Auth server base URL is selected server-side from `environment` only (no client override), reducing SSRF/misrouting risk.
 - `state` is required for token exchange and enforced one-time-use.
 - `/oauth/par` stores an immutable authorization transaction: state, nonce, PKCE S256 challenge, redirect URI, environment/CAS issuer, scope, client ID, request URI, and expiry. `/oauth/token` accepts only `code`, `state`, and `codeVerifier`; it uses the stored transaction values for CAS.
@@ -107,11 +117,17 @@ curl http://localhost:3000/health
   - `codeVerifier`: unreserved URI charset, 43-128 chars
 - Request fields are length-bounded (state/nonce/scope/code/token) to reduce abuse surface.
 - In-memory transaction storage is capped and expires entries to limit local-dev growth. It is intentionally not suitable for production, restarts, horizontal scaling, or audit retention.
-- OAuth endpoints return `Cache-Control: no-store`.
+- OAuth endpoints return `Cache-Control: no-store` and `Pragma: no-cache`.
+- `/oauth` is rate limited to 30 requests per minute per client. The limit key is the socket peer address only. `X-Forwarded-For` is never used for it, so a caller cannot mint a fresh limit key by sending a header.
+- Request bodies are capped at 32 kB and must be declared `application/json`. Anything larger gets a `413`, anything unparseable a `400`, and neither reaches a route.
+- The ID token verifier hardcodes RS256, which is the only algorithm CAS advertises. The token's own `alg` is read only to reject anything that is not exactly RS256, and `kid` only ever selects a key. There is no code path that could verify an unsigned token or an HMAC one, so algorithm confusion is impossible by construction rather than caught by a check.
 - Refresh token support is exposed for approved integrations, but issuance is usually restricted by default.
+- **`POST /oauth/token/refresh` and `POST /oauth/token/revoke` are unauthenticated in this reference.** There is no session, cookie, bearer check, or CSRF protection in front of either. Anyone who can reach them can post any refresh token or token and this server will attach `CLIENT_SECRET` and act on it at CAS. That makes a stolen refresh token, which is inert against CAS on its own, usable, and it makes revocation a denial-of-service primitive against other people's sessions. A production deployment must bind the refresh token to a server-side session at `/oauth/token`, stop returning it to the client, and look it up from that session instead of accepting one from the request body. Because of this, both routes are registered only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true` is set. With the flag unset (the default), a request to either path gets the same clean 404 as any other unknown route.
+- CAS failures and unexpected errors are logged in full server-side but returned to the caller as an OAuth error code only. Upstream response bodies and Node error strings are never relayed, so this BFF cannot be used from outside as a probe for CAS.
+- Security headers are set explicitly for a JSON API: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and HSTS. CSP, frameguard, COOP, and CORP are deliberately absent because they govern how a document loads or is isolated, and this server serves no document. No `X-Powered-By` is sent.
 
 ## Related Docs
 
 - Root guide: `../README.md`
 - Integration guide: `../docs/INTEGRATION.md`
-- Sample apps: `../android`, `../ios`, `../flutter`, `../react-native`
+- Sample apps: `../android`, `../ios`, `../flutter`, `../react-native`, `../react-native-bare`

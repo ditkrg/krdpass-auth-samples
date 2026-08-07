@@ -10,10 +10,6 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    plugins {
-        // AGP 9+ ships Kotlin built-in, so no separate kotlin.android plugin is declared.
-        id("com.android.application") version "9.3.0"
-    }
 }
 
 plugins {
@@ -31,7 +27,7 @@ dependencyResolutionManagement {
 rootProject.name = "DemoKrdPassAuth"
 include(":app")
 
-// --- Local SDK override (composite build) -------------------------------------------------
+// Local SDK override (composite build).
 // On a clean checkout the core resolves from Maven Central (krd.pass:krdpass-auth, no token).
 // For deliberate local SDK development, pass
 // -PkrdpassSdkDir=/path/to/krdpass-auth-sdk-android. Normal builds always use

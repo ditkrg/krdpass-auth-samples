@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeColors, UI } from '../theme';
 import {
   ActionButton,
-  ActionMessage,
+  ActionMessageView,
+  type ActionMessage,
   ClaimSection,
   ExpandableCard,
 } from './DemoUi';
@@ -25,7 +26,7 @@ interface DashboardScreenProps {
   userInfo?: KrdpassUserInfo;
   isLoadingUserInfo: boolean;
   isLoadingAction: boolean;
-  actionMessage?: string;
+  actionMessage?: ActionMessage;
   onFetchUserInfo: () => void;
   onLogout: () => void;
   onVerifyToken: () => void;
@@ -228,7 +229,7 @@ export function DashboardScreen({
             <MaterialIcons color={theme.primary} name="settings" size={20} />
             <Text style={styles.managementTitle}>Token Management</Text>
           </View>
-          <ActionMessage message={actionMessage} theme={theme} />
+          <ActionMessageView message={actionMessage} theme={theme} />
           <View style={styles.actionStack}>
             <ActionButton
               compact

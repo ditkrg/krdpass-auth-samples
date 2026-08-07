@@ -12,7 +12,7 @@ Reference Expo app for **Sign in with KRDPASS**. The SDK package supports both E
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22.11+ (CI builds on 24)
 - Expo CLI tooling
 - iOS/Android native toolchains for `expo run:*`
 - A running backend that implements the server-mediated PAR + token exchange (see [Sign in with KRDPASS](https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html))
@@ -26,14 +26,11 @@ The dependency versions follow Expo SDK 57's exact supported matrix. React,
 React Native, and Expo packages must move together during an SDK upgrade;
 `npm run doctor` verifies that alignment.
 
-## Required Onboarding Inputs
+## Onboarding
 
-- `CLIENT_ID`
-- HTTPS `REDIRECT_URI`
-- `BACKEND_URL`
-- Approved scopes (include `offline_access` only when approved)
-- iOS associated domain host
-- Android package name + signing SHA-256 fingerprint
+You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
+this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
+for what to send to `integration@pass.krd`.
 
 ## Step-by-Step Setup
 
@@ -43,7 +40,7 @@ React Native, and Expo packages must move together during an SDK upgrade;
 npm install
 ```
 
-   This sample targets React Native SDK `v1.3.0` and Android core `1.3.0`,
+   This sample targets React Native SDK `v1.4.0` and Android core `1.4.0`,
    both installed from the published release.
 
 2. Configure demo values from template:

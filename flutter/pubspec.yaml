@@ -1,7 +1,7 @@
 name: demo_krdpass_auth
 description: Demo app demonstrating Sign in with KRDPASS OAuth provider functionality.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.4.0+1
 
 environment:
   sdk: ^3.12.1
@@ -17,7 +17,7 @@ dependencies:
   krdpass_auth_flutter:
     git:
       url: https://github.com/ditkrg/krdpass-auth-sdk-flutter.git
-      ref: v1.3.0
+      ref: v1.4.0
 
 dev_dependencies:
   flutter_test:
@@ -38,5 +38,11 @@ flutter:
   uses-material-design: true
   assets:
     # Local runtime config. Create via sync-secrets scripts (all/android/ios) or copy env.example -> .env
+    #
+    # A Flutter asset is copied verbatim into the APK and the IPA, so whatever is
+    # in .env ships inside the binary and can be extracted from it. That is fine
+    # for the public client_id and backend URL this demo uses, and it is exactly
+    # why the client_secret lives on the backend instead. env.example is NOT an
+    # asset: it is a template for humans, and bundling it only papers over a
+    # missing .env.
     - .env
-    - env.example

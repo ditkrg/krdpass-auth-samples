@@ -16,18 +16,16 @@ Reference Android app for **Sign in with KRDPASS**.
 - KRDPASS app on device/emulator
 - Running backend (recommended: `server`)
 
-## Required Onboarding Inputs
+## Onboarding
 
-- `clientId`
-- HTTPS `redirectUri`
-- `backendUrl`
-- Approved scopes (including citizen scopes only if approved)
-- Android package name + SHA-256 signing fingerprint registered with KRDPASS
+You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
+this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
+for what to send to `integration@pass.krd`.
 
 ## Step-by-Step Setup
 
 1. Open this folder in Android Studio (or use Gradle from the CLI). The sample
-   resolves `krd.pass:krdpass-auth:1.3.0` from Maven Central. To build against a
+   resolves `krd.pass:krdpass-auth:1.4.0` from Maven Central. To build against a
    local SDK clone instead, use the Gradle composite-build override in
    `settings.gradle.kts`.
 

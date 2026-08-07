@@ -10,7 +10,7 @@ import SwiftUI
 struct LandingView: View {
     @Bindable var viewModel: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         GeometryReader { proxy in
             ScrollView {
@@ -34,9 +34,9 @@ struct LandingView: View {
             }
         }
     }
-    
+
     // MARK: - Logo Section
-    
+
     private var logoSection: some View {
         VStack(spacing: 16) {
             // Logo circle
@@ -44,17 +44,17 @@ struct LandingView: View {
                 Circle()
                     .fill(KrdpassColors.primary)
                     .frame(width: 72, height: 72)
-                
+
                 Image(systemName: "lock.fill")
                     .font(.system(size: 36))
                     .foregroundColor(.white)
             }
-            
+
             VStack(spacing: 4) {
                 Text("KRDPASS")
                     .font(.title)
                     .fontWeight(.black)
-                
+
                 Text("Digital Identity Demo")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -65,9 +65,9 @@ struct LandingView: View {
             }
         }
     }
-    
+
     // MARK: - Error Card
-    
+
     private func errorCard(message: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             // Icon chip: soft error tint so it reads as an accent, not an alarm.
@@ -92,6 +92,17 @@ struct LandingView: View {
                     .foregroundColor(.primary.opacity(0.8))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
+
+                // provider_not_installed is the only sign-in failure the user can actually
+                // fix, and the SDK hands us the URL that fixes it. Offer it as an action
+                // instead of ending on an error message.
+                if let installUrl = viewModel.installUrl {
+                    Link("Install KRDPASS", destination: installUrl)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(KrdpassColors.error)
+                        .padding(.top, 4)
+                }
             }
 
             Button {
@@ -106,9 +117,9 @@ struct LandingView: View {
         .background(KrdpassColors.error.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
-    
+
     // MARK: - Configuration Card
-    
+
     private var configurationCard: some View {
         VStack(spacing: 0) {
             // Citizen Data Toggle
@@ -117,14 +128,14 @@ struct LandingView: View {
                     Text("Citizen Data")
                         .font(.subheadline)
                         .fontWeight(.bold)
-                    
+
                     Text("Include citizen_identity scope")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Toggle("", isOn: $viewModel.includeCitizenScope)
                     .labelsHidden()
                     .scaleEffect(0.8)
@@ -139,14 +150,14 @@ struct LandingView: View {
                     Text("Offline Access")
                         .font(.subheadline)
                         .fontWeight(.bold)
-                    
+
                     Text("Include offline_access scope (Refresh Token)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Toggle("", isOn: $viewModel.includeOfflineScope)
                     .labelsHidden()
                     .scaleEffect(0.8)
@@ -154,21 +165,21 @@ struct LandingView: View {
             .frame(minHeight: 48)
             Divider()
                 .padding(.vertical, 12)
-            
+
             // Auth Mode Toggle
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Auth Mode")
                         .font(.subheadline)
                         .fontWeight(.bold)
-                    
+
                     Text(viewModel.useServerMode ? "Backend-mediated (Secure)" : "Direct (Client-only)")
                         .font(.caption)
                         .foregroundColor(KrdpassColors.primary)
                 }
-                
+
                 Spacer()
-                
+
                 Toggle("", isOn: $viewModel.useServerMode)
                     .labelsHidden()
                     .scaleEffect(0.8)
@@ -183,9 +194,9 @@ struct LandingView: View {
                 .stroke(Color(.separator).opacity(0.5), lineWidth: 1)
         )
     }
-    
+
     // MARK: - Sign In Button
-    
+
     private var signInButton: some View {
         Button {
             Task {
@@ -205,7 +216,7 @@ struct LandingView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 20, height: 20)
                         .foregroundColor(.white)
-                    
+
                     Text("Sign in with KRDPASS")
                         .font(.system(size: 16, weight: .medium))
                         .kerning(0.32)

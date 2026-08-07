@@ -5,12 +5,22 @@ import { ThemeColors } from '../theme/colors';
 import { UI } from '../theme/metrics';
 import { DemoButton } from './DemoButton';
 
+/**
+ * A transient status line for the token-management actions.
+ *
+ * `kind` is the state; `text` is only ever text. Keep them separate: encoding "this failed"
+ * into the string (a prefix, an icon, a marker character) forces the card to parse the
+ * message back apart, and that parser is wrong the first time a message legitimately starts
+ * with the marker.
+ */
+export type ActionMessage = { kind: 'ok' | 'error'; text: string };
+
 interface TokenManagementCardProps {
   onVerifyToken: () => void;
   onRefreshToken: () => void;
   onRevokeToken: () => void;
   theme: ThemeColors;
-  actionMessage?: string | null;
+  actionMessage?: ActionMessage | null;
   disabled?: boolean;
 }
 
@@ -23,8 +33,8 @@ export const TokenManagementCard: React.FC<TokenManagementCardProps> = ({
   disabled = false,
 }) => {
   const styles = useMemo(() => getStyles(theme), [theme]);
-  const isError = actionMessage?.startsWith('❌') ?? false;
-  const statusText = actionMessage?.replace(/^[✅❌]\s*/, '');
+  // The kind drives the icon and the colour; the text is only ever text.
+  const isError = actionMessage?.kind === 'error';
 
   return (
     <View style={styles.card}>
@@ -55,7 +65,7 @@ export const TokenManagementCard: React.FC<TokenManagementCardProps> = ({
               { color: isError ? theme.error : theme.success },
             ]}
           >
-            {statusText}
+            {actionMessage.text}
           </Text>
         </View>
       )}

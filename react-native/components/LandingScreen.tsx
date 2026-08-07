@@ -25,6 +25,9 @@ interface LandingScreenProps {
   onServerModeChange: (val: boolean) => void;
   onSignIn: () => void;
   onClearError?: () => void;
+  /** Store listing for KRDPASS, set only for provider_not_installed. */
+  installUrl?: string | null;
+  onInstallProvider?: () => void;
   theme: ThemeColors;
 }
 
@@ -39,6 +42,8 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
   onServerModeChange,
   onSignIn,
   onClearError,
+  installUrl,
+  onInstallProvider,
   theme,
 }) => {
   const styles = useMemo(() => getStyles(theme), [theme]);
@@ -65,6 +70,20 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
             <View style={styles.errorTextContainer}>
               <Text style={styles.errorTitle}>Sign-in failed</Text>
               <Text style={styles.errorText}>{error}</Text>
+              {/*
+                provider_not_installed is the only sign-in failure the user can actually
+                fix, and the SDK hands us the URL that fixes it. Offer it as an action
+                instead of ending on an error message.
+              */}
+              {installUrl && onInstallProvider && (
+                <Text
+                  accessibilityRole="button"
+                  onPress={onInstallProvider}
+                  style={styles.errorAction}
+                >
+                  Install KRDPASS
+                </Text>
+              )}
             </View>
             {onClearError && (
               <Pressable
@@ -240,6 +259,12 @@ const getStyles = (theme: ThemeColors) =>
       backgroundColor: theme.error + '1F',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    errorAction: {
+      color: theme.error,
+      fontSize: 13,
+      fontWeight: '700',
+      marginTop: 6,
     },
     errorTextContainer: {
       flex: 1,

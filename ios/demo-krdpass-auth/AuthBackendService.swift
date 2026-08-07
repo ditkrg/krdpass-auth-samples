@@ -13,7 +13,7 @@ import KrdpassAuth
 class AuthBackendService {
     private let baseUrl: String
     private let session: URLSession
-    
+
     init(baseUrl: String, session: URLSession = .shared) {
         self.baseUrl = baseUrl
         self.session = session
@@ -85,9 +85,9 @@ class AuthBackendService {
         }
         return try await post("/oauth/par", body: body)
     }
-    
+
     // MARK: - Token Exchange
-    
+
     /// Exchange authorization code for tokens via backend
     func exchangeToken(
         code: String,
@@ -102,9 +102,9 @@ class AuthBackendService {
         ]
         return try await post("/oauth/token", body: body)
     }
-    
+
     // MARK: - Token Refresh
-    
+
     /// Refresh tokens via backend.
     /// Proxies the request to POST /oauth/token/refresh to ensure the client secret remains secure.
     ///
@@ -127,9 +127,9 @@ class AuthBackendService {
         }
         return try await post("/oauth/token/refresh", body: body)
     }
-    
+
     // MARK: - Token Revocation
-    
+
     /// Revoke token via backend.
     /// Proxies the request to POST /oauth/token/revoke to invalidate the token.
     ///
@@ -157,13 +157,6 @@ struct ParResponseDTO: Decodable, Sendable {
     let requestUri: String
     let state: String?
     let expiresIn: Int?
-    
-    // Backend returns camelCase keys
-    enum CodingKeys: String, CodingKey {
-        case requestUri
-        case state
-        case expiresIn
-    }
 }
 
 struct TokenResponseDTO: Decodable, Sendable {
@@ -173,17 +166,7 @@ struct TokenResponseDTO: Decodable, Sendable {
     let refreshToken: String?
     let idToken: String?
     let scope: String?
-    
-    // Backend returns camelCase keys
-    enum CodingKeys: String, CodingKey {
-        case accessToken
-        case tokenType
-        case expiresIn
-        case refreshToken
-        case idToken
-        case scope
-    }
-    
+
     var asDictionary: [String: Any] {
         var dict: [String: Any] = ["accessToken": accessToken]
         if let tokenType = tokenType { dict["tokenType"] = tokenType }
