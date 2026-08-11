@@ -1,0 +1,318 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "KRDPASS CAS OAuth Endpoints (Used by Sample Server)",
+    "version": "1.0.0",
+    "description": "Contract for CAS endpoints invoked by server/server.js. Covers PAR, token exchange, token refresh, and token revocation calls made from the sample backend to CAS. This file is the canonical source for this contract. The copy published in the developer manual (docs/public/cas-oauth-endpoints.json there) is a mirror and must be updated from here."
+  },
+  "servers": [
+    {
+      "url": "https://auth.dev.krd",
+      "description": "CAS development"
+    },
+    {
+      "url": "https://account.id.krd",
+      "description": "CAS production"
+    }
+  ],
+  "paths": {
+    "/connect/par": {
+      "post": {
+        "summary": "Create pushed authorization request",
+        "description": "Used by the example backend in pushAuthorizationRequest(). Sends a signed JAR request and receives request_uri.",
+        "operationId": "createPushedAuthorizationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CasParRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PAR created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasParSuccessResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "CAS error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/connect/token": {
+      "post": {
+        "summary": "Exchange code or refresh tokens",
+        "description": "Used by the example backend in exchangeCodeForTokens() and refreshTokens().",
+        "operationId": "postToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CasTokenAuthorizationCodeRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CasTokenRefreshRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasTokenSuccessResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "CAS error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/connect/revocation": {
+      "post": {
+        "summary": "Revoke token",
+        "description": "Used by the example backend in revokeToken().",
+        "operationId": "revokeToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CasRevocationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token revoked (typically empty body)"
+          },
+          "default": {
+            "description": "CAS error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CasParRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "client_id",
+          "client_secret",
+          "request"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "request": {
+            "type": "string",
+            "description": "Signed JWT request object (JAR, RFC 9101)"
+          }
+        }
+      },
+      "CasParSuccessResponse": {
+        "type": "object",
+        "required": [
+          "request_uri",
+          "expires_in"
+        ],
+        "properties": {
+          "request_uri": {
+            "type": "string",
+            "description": "URN request reference used in authorize request"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": true
+      },
+      "CasTokenAuthorizationCodeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "grant_type",
+          "client_id",
+          "client_secret",
+          "redirect_uri",
+          "code",
+          "code_verifier"
+        ],
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": [
+              "authorization_code"
+            ]
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "redirect_uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "code": {
+            "type": "string"
+          },
+          "code_verifier": {
+            "type": "string",
+            "description": "PKCE code verifier (RFC 7636)"
+          }
+        }
+      },
+      "CasTokenRefreshRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "grant_type",
+          "client_id",
+          "client_secret",
+          "refresh_token"
+        ],
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": [
+              "refresh_token"
+            ]
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Optional requested scope string"
+          }
+        }
+      },
+      "CasTokenSuccessResponse": {
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "id_token": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "CasRevocationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "client_id",
+          "client_secret",
+          "token"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "token_type_hint": {
+            "type": "string",
+            "enum": [
+              "access_token",
+              "refresh_token"
+            ]
+          }
+        }
+      },
+      "CasErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "error_description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

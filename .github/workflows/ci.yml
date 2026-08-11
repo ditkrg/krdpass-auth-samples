@@ -1,0 +1,223 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # No branch filter: PRs here target dev as often as main, and a filtered
+  # pull_request event runs nothing at all rather than failing loudly.
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify sample directories
+        run: |
+          for p in android ios flutter react-native react-native-bare server; do
+            test -d "$p" || { echo "::error::missing sample directory: $p"; exit 1; }
+          done
+      # sync-secrets.sh writes .env and key.properties files into the samples and
+      # shared/secrets holds a real keystore. All are gitignored, so this is the
+      # only thing standing between a stray `git add -f` and a published secret.
+      # Never gate this behind a release flag.
+      - name: No committed secrets
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\.[^/]+)?$|\.keystore$|\.jks$|\.p12$|\.pem$|\.p8$|(^|/)key\.properties$|(^|/)config\.properties$' | grep -v '\.env\.example$'; then
+            echo "::error::secret-shaped file is tracked by git"
+            exit 1
+          fi
+
+  server:
+    name: Server (BFF reference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: node --check server.js
+      # Covers single-use state, PKCE re-derivation, JWKS caching, and id_token
+      # verification on both the exchange and the refresh path.
+      - run: npm test
+
+  # These jobs build the samples against the SDK versions their manifests pin.
+  # They must stay ungated: a sample that is not built by CI is a sample that is
+  # not known to compile.
+  android:
+    name: Android sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      # config.properties is gitignored and the build fails without it, the same way
+      # the Flutter sample needs a .env. The example values are enough to compile.
+      - run: cp config.properties.example config.properties
+      - run: ./gradlew :app:assembleDebug
+
+  flutter:
+    name: Flutter sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: flutter
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: cp env.example .env
+      - run: flutter build apk --debug
+
+  ios:
+    name: iOS samples
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
+      # No npm cache key here: the sample lockfiles are regenerated at release,
+      # so there is nothing stable to hash between releases.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+      - run: >
+          xcodebuild build -project demo-krdpass-auth.xcodeproj
+          -scheme demo-krdpass-auth
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+      - run: flutter pub get
+        working-directory: flutter
+      - run: cp env.example .env
+        working-directory: flutter
+      - run: flutter build ios --simulator --no-codesign
+        working-directory: flutter
+      # lockfiles land with the 1.5.0 release; switch back to npm ci then
+      - run: npm install
+        working-directory: react-native-bare
+      - run: bundle install
+        working-directory: react-native-bare/ios
+      - run: bundle exec pod install
+        working-directory: react-native-bare/ios
+      # pod install rewrites Podfile.lock in place, so without this the job would
+      # pass on a lockfile that no longer matches the Podfile.
+      - name: Podfile.lock is in sync with the Podfile
+        run: git diff --exit-code -- Podfile.lock
+        working-directory: react-native-bare/ios
+      - run: >
+          xcodebuild build -workspace KrdpassAuthBare.xcworkspace
+          -scheme KrdpassAuthBare
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+        working-directory: react-native-bare/ios
+
+  react-native:
+    name: React Native sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: react-native
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No npm cache key here: the sample lockfiles are regenerated at release,
+      # so there is nothing stable to hash between releases.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      # lockfiles land with the 1.5.0 release; switch back to npm ci then
+      - run: npm install
+      - run: npm run doctor
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: ./gradlew :app:assembleDebug
+        working-directory: react-native/android
+        env:
+          NODE_ENV: development
+
+  react-native-bare:
+    name: Bare React Native sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: react-native-bare
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No npm cache key here: the sample lockfiles are regenerated at release,
+      # so there is nothing stable to hash between releases.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      # lockfiles land with the 1.5.0 release; switch back to npm ci then
+      - run: npm install
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --runInBand
+      - run: npx react-native config > /dev/null
+      - run: ./gradlew :app:assembleDebug
+        working-directory: react-native-bare/android

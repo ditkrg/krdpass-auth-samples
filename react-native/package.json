@@ -1,0 +1,65 @@
+{
+  "name": "krdpass-auth-react-native-sample",
+  "version": "1.5.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "lint": "eslint .",
+    "test": "node --test __tests__/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "doctor": "npx expo-doctor@1.20.1"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
+    "expo": "~57.0.8",
+    "expo-build-properties": "~57.0.7",
+    "expo-dev-client": "~57.0.8",
+    "expo-font": "~57.0.1",
+    "expo-splash-screen": "~57.0.5",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.1",
+    "krdpass-auth-react-native": "git+https://github.com/ditkrg/krdpass-auth-sdk-react-native.git#v1.5.0",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-get-random-values": "~1.11.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "~19.2.3",
+    "babel-preset-expo": "~57.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-expo": "~57.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.5",
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "yaml": "^2.0.0",
+    "@xmldom/xmldom": "^0.8.13",
+    "shell-quote": "^1.8.5",
+    "postcss": "^8.5.10",
+    "ws": "^8.20.1",
+    "xcode": {
+      "uuid": "^11.1.1"
+    },
+    "brace-expansion": "^5.0.8"
+  },
+  "private": true,
+  "allowScripts": {
+    "git+https://github.com/ditkrg/krdpass-auth-sdk-react-native.git#v1.5.0": true,
+    "fsevents@2.3.3": true,
+    "unrs-resolver@1.12.2": true
+  },
+  "expo": {
+    "doctor": {
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
+      }
+    }
+  }
+}

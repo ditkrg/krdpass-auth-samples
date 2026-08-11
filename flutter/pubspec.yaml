@@ -1,0 +1,49 @@
+name: demo_krdpass_auth
+description: Demo app demonstrating Sign in with KRDPASS OAuth provider functionality.
+publish_to: 'none'
+version: 1.5.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.9
+  http: ^1.5.0
+  flutter_dotenv: ^6.0.1
+  url_launcher: ^6.3.2
+  # KRDPASS Flutter SDK, from the SDK repo's git tag.
+  # (Its Android half transitively needs krd.pass:krdpass-auth from Maven Central, no token.)
+  krdpass_auth_flutter:
+    git:
+      url: https://github.com/ditkrg/krdpass-auth-sdk-flutter.git
+      ref: v1.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+# To develop against a local SDK clone, put the override in pubspec_overrides.yaml
+# (gitignored) instead of here:
+#   dependency_overrides:
+#     krdpass_auth_flutter:
+#       path: /path/to/krdpass-auth-sdk-flutter
+
+flutter:
+  config:
+    # Flutter's LLDB device launcher can leave the app suspended before the
+    # Dart VM service starts. Use Xcode's proven debugger path for this sample.
+    enable-lldb-debugging: false
+  uses-material-design: true
+  assets:
+    # Local runtime config. Create via sync-secrets scripts (all/android/ios) or copy env.example -> .env
+    #
+    # A Flutter asset is copied verbatim into the APK and the IPA, so whatever is
+    # in .env ships inside the binary and can be extracted from it. That is fine
+    # for the public client_id and backend URL this demo uses, and it is exactly
+    # why the client_secret lives on the backend instead. env.example is NOT an
+    # asset: it is a template for humans, and bundling it only papers over a
+    # missing .env.
+    - .env

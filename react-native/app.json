@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "KRDPASS Demo",
+    "slug": "krdpass-auth-react-native-example",
+    "scheme": "krdpass-auth-react-native-example",
+    "version": "1.5.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "krdpass-auth-react-native",
+      "./plugins/withKrdpassDemoSigning",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/adaptive-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "krd.pass.auth.demo",
+      "associatedDomains": [
+        "applinks:your-backend.example.com"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "krd.pass.auth.demo"
+    }
+  }
+}

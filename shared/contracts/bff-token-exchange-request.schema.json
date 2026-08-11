@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pass.krd/schemas/bff-token-exchange-request.schema.json",
+  "title": "KRDPass sample BFF token exchange request",
+  "description": "Public mobile-client request to POST /oauth/token. The BFF binds environment and redirect URI to the server-side PAR state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "codeVerifier",
+    "state"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "codeVerifier": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._~-]+$"
+    },
+    "state": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 256
+    }
+  },
+  "examples": [
+    {
+      "code": "authorization-code",
+      "codeVerifier": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFG",
+      "state": "random-state"
+    }
+  ]
+}
