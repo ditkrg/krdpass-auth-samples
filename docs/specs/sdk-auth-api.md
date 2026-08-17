@@ -276,6 +276,3 @@ native failure and is not converted into a browser launch.
 | Logging hook | `KrdpassLogger` | `KrdpassLogger` | `KrdpassLogger` | none |
 | Token redaction in `toString` | Yes | Yes | Yes | No, plain interfaces |
 | Verifies refresh-response `id_token` | Yes | Yes | Yes (native core) | Yes (native core) |
-
----
-**Maintained By:** KRDPASS Developer Platform

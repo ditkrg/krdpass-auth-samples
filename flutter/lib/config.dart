@@ -9,10 +9,8 @@ class Config {
     'https://your-backend.example.com/_krdpass/oauth/callback',
   };
 
-  /// Fail on the first missing or still-placeholder key, with the same wording every
-  /// sample in this repo uses: what is missing, which file supplies it, and how to
-  /// generate it. A demo that starts against half a config and dies later on a DNS
-  /// error teaches nothing.
+  /// Fail on the first missing or still-placeholder key: what is missing, which file
+  /// supplies it, and how to generate it.
   static String _requireEnv(String key) {
     final value = dotenv.env[key]?.trim() ?? '';
     if (value.isEmpty || _placeholders.contains(value)) {

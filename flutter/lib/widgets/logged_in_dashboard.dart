@@ -19,7 +19,7 @@ class LoggedInDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = viewModel.tokens!;
     // Decoded once here and handed to both readers: the identity and the claim dump are
-    // the same ID token, and decoding it twice per rebuild is work nobody asked for.
+    // the same ID token.
     final idClaims = _decodeUnverified(tokens.idToken);
     final identity = CitizenIdentity.fromSession(
       idClaims: idClaims,

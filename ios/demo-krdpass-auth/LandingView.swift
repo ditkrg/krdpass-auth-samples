@@ -62,7 +62,6 @@ struct LandingView: View {
 
     private func errorCard(message: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            // Icon chip: soft error tint so it reads as an accent, not an alarm.
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(KrdpassColors.error.opacity(0.12))

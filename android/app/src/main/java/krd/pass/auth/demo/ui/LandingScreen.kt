@@ -116,7 +116,6 @@ fun LandingScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Icon chip: soft error tint so it reads as an accent, not an alarm.
                     Box(
                         modifier = Modifier
                             .size(36.dp)

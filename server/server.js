@@ -49,8 +49,6 @@ import {
   sendUpstreamError,
 } from './support.js';
 
-// Input validation
-
 // A caller-caused input problem that never reached CAS. Routes check
 // `instanceof ValidationError` and answer 400 with the error's own message.
 class ValidationError extends Error {
@@ -133,8 +131,6 @@ const sendTokens = (res, casTokens) =>
     scope: casTokens.scope,
   });
 
-// Routes
-
 export const createApp = ({ httpClient = casHttp, extras = {} } = {}) => {
 // Per process, not shared across instances: discovery metadata by auth server
 // URL, and the imported JWKS signing keys by JWKS URI.
@@ -200,7 +196,8 @@ stateCleanupTimer.unref?.();
 // sha256(refresh token) -> scope CAS granted, learned at token exchange and
 // used to constrain the refresh route. Hashed so the map is not a second copy
 // of the credential. Best effort and empty after a restart; CAS enforces the
-// grant on every refresh whether or not this process remembers it.
+// grant on every refresh whether or not this process remembers it: this map
+// demonstrates where a BFF hangs its down-scoping, it is not the control.
 const grantedScopes = new Map();
 
 const tokenFingerprint = (token) =>
@@ -630,8 +627,6 @@ const server = http.createServer(async (req, res) => {
 
 return server;
 };
-
-// Startup
 
 // ALLOWED_REDIRECT_HOSTS is required: isAllowedRedirectUri fails closed, so an
 // unset value would look healthy and reject every PAR. Refuse to start instead.

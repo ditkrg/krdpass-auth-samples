@@ -2,24 +2,19 @@ import Foundation
 import SwiftUI
 import KrdpassAuth
 
-/// Main view model for the demo app - manages authentication state
 @MainActor
 @Observable
 final class AuthViewModel {
     // MARK: - State
 
-    /// A sign-in is in flight.
     var isSigningIn = false
 
-    /// A UserInfo sync is in flight.
     var isLoadingUserInfo = false
 
-    /// A token-management action (verify / refresh / revoke) is in flight.
     var isBusy = false
 
     var tokens: KrdpassTokenResult? {
-        // Decode once per token set. The claim views read these on every redraw, and a JWT
-        // decode per redraw is work nobody asked for.
+        // Decode once per token set. The claim views read these on every redraw.
         didSet {
             idTokenClaims = Self.decodedClaims(tokens?.idToken, auth: krdpassAuth)
             accessTokenClaims = Self.decodedClaims(tokens?.accessToken, auth: krdpassAuth)
@@ -74,9 +69,6 @@ final class AuthViewModel {
 
     // MARK: - Sign In
 
-    /// Sign in, handling each outcome on its own terms: a cancellation is not a
-    /// failure, a timeout is retryable, and `provider_not_installed` carries the
-    /// App Store URL that fixes it.
     func signIn() async {
         guard !isSigningIn else { return }
         isSigningIn = true
@@ -142,7 +134,7 @@ final class AuthViewModel {
         let authTimeout = TimeInterval(max(1, parResponse.expiresIn ?? 300))
         let authResult = await krdpassAuth.authenticate(
             requestUri: parResponse.requestUri,
-            state: parResponse.state,
+            state: parResponse.state ?? state,
             timeout: authTimeout
         )
 
@@ -173,9 +165,8 @@ final class AuthViewModel {
         }
     }
 
-    /// `KrdpassTokenResult(dictionary:)` returns nil only when `accessToken` is
-    /// absent or empty, which means the backend returned no usable token. Fail
-    /// rather than fabricate one.
+    /// `KrdpassTokenResult(dictionary:)` returns nil when `accessToken` is absent or empty,
+    /// which means the backend returned no usable token. Fail rather than fabricate one.
     private static func tokenResult(from response: TokenResponseDTO) throws -> KrdpassTokenResult {
         guard let result = KrdpassTokenResult(dictionary: response.asDictionary) else {
             throw SignInError(message: "The backend returned no access token.")
@@ -185,10 +176,6 @@ final class AuthViewModel {
 
     // MARK: - Logout
 
-    /// Sign out. Clearing the local fields is the visible half; the half that
-    /// matters is revoking the refresh token, which would otherwise keep working.
-    /// There is no end-session endpoint here, so issued access tokens stay valid
-    /// until they expire; if your deployment adds one, call it here as well.
     func logout() async {
         let session = tokens
         clearSession()
@@ -213,8 +200,7 @@ final class AuthViewModel {
     private func revokeSessionTokens(_ session: KrdpassTokenResult) async throws {
         var targets: [(String, String)] = []
         if let refreshToken = session.refreshToken { targets.append((refreshToken, "refresh_token")) }
-        // Blank-filtered like the Android and Flutter demos: an empty token would 400 at the
-        // server's own validation.
+        // An empty token would 400 at the server's own validation.
         if !session.accessToken.isEmpty { targets.append((session.accessToken, "access_token")) }
 
         for (token, hint) in targets {
@@ -286,14 +272,10 @@ final class AuthViewModel {
         return try Self.tokenResult(from: response)
     }
 
-    // MARK: - Clear Error
-
     func clearError() {
         errorMessage = nil
         installUrl = nil
     }
-
-    // MARK: - User Details (Data Logic)
 
     /// Merged claims from UserInfo (preferred) or ID Token
     private var claims: [String: JSONValue] {
@@ -375,8 +357,6 @@ final class AuthViewModel {
         isBusy = false
     }
 
-    /// Refresh on demand, so the demo can show the exchange happening. Real code
-    /// should not need this button: `validAccessToken()` refreshes at the point of use.
     func refreshToken() async {
         guard !isBusy else { return }
         guard let current = tokens, let token = current.refreshToken else {
@@ -394,8 +374,6 @@ final class AuthViewModel {
         isBusy = false
     }
 
-    /// Revoke the session's tokens. The refresh token is the one that matters: it is the
-    /// long-lived credential, and revoking it is what actually ends the grant.
     func revokeToken() async {
         guard !isBusy else { return }
         guard let session = tokens else {
@@ -417,9 +395,6 @@ final class AuthViewModel {
 
 // MARK: - Action Message
 
-/// A transient status line. `ok` is the state; `text` is only ever text.
-/// Encoding "this failed" into the string would force the view to parse the
-/// message back apart.
 struct ActionMessage {
     let ok: Bool
     let text: String

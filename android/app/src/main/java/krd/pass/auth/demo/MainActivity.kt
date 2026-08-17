@@ -48,7 +48,6 @@ class MainActivity : ComponentActivity() {
                 "or run ./scripts/sync-secrets.sh from the repository root."
         }
 
-        // Initialize once (ideally in Application.onCreate), then register this Activity for results.
         KrdpassAuth.initialize(
             KrdpassConfig(clientId = clientId, redirectUri = redirectUri, environment = environment)
         )

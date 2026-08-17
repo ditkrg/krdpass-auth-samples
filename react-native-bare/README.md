@@ -3,18 +3,6 @@
 Reference bare React Native app for **Sign in with KRDPASS**. Expo-free: it exercises
 React Native autolinking and Codegen directly and installs no Expo packages.
 
-## What This Sample Demonstrates
-
-- Server-mediated flow (recommended): backend performs PAR + token exchange
-- Client-only flow: the SDK performs PAR + PKCE + token exchange itself
-- Both flows are switchable via the in-app Auth Mode toggle
-- Scope toggles for `citizen_identity` and `offline_access`
-- Token refresh on demand, and automatic refresh at the point of use (`validAccessToken`)
-- Token revocation, and a sign-out that revokes the refresh token first
-- UserInfo fetch and ID-token signature verification against the CAS JWKS
-- Universal Link and App Link callback handling
-- Typed error branching, including the `provider_not_installed` install prompt
-
 ## Prerequisites
 
 - Node.js 22.11+ (CI builds on 24)
@@ -23,11 +11,7 @@ React Native autolinking and Codegen directly and installs no Expo packages.
   protocol reference under "Related Docs")
 - KRDPASS onboarding-approved credentials
 
-## Onboarding
-
-You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
-this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
-for what to send to `integration@pass.krd`.
+See [`docs/BUILDING.md`](../docs/BUILDING.md#toolchain-pins) for toolchain pins.
 
 ## Step-by-Step Setup
 
@@ -96,14 +80,9 @@ npm run ios
 
 ## Notes
 
-- Keep `client_secret` and private keys on the backend only.
 - The default flow is server-mediated. The in-app direct-flow switch exercises the
   SDK-only PKCE path and should be used only with an approved public client.
 - Tokens stay in memory and the app never renders their values.
-- Redirect validation requires the exact registered HTTPS origin, encoded path, and
-  fixed query parameters.
-- BFF token exchange sends only `code`, `codeVerifier`, and `state`; the BFF
-  recovers environment and redirect URI from server-side PAR state.
 - `npm test` runs the Jest suite, including the shared redirect-validation vectors
   from [`shared/test-vectors`](../shared/test-vectors/redirect-validation.json).
 
@@ -112,3 +91,4 @@ npm run ios
 - React Native SDK README: https://github.com/ditkrg/krdpass-auth-sdk-react-native#readme
 - Expo sample: [`../react-native`](../react-native)
 - Sign in with KRDPASS protocol & backend reference: https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html
+- Toolchain pins: [`../docs/BUILDING.md`](../docs/BUILDING.md#toolchain-pins)

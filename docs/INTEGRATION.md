@@ -20,7 +20,7 @@ runs the OAuth exchange. PKCE and `state` stay in your app:
    [Reference: Endpoint Contracts](https://docs.digital.gov.krd/software-development/04-interoperability/15-krdpass-reference.html#endpoint-contracts)
    and the [PAR request schema](../shared/contracts/bff-par-request.schema.json).
 3. Your app calls the SDK's `authenticate` with that `request_uri` and the `state` the
-   response returned, which is your own when you sent one.
+   response returned, falling back to the one your app generated if the response omits it.
 4. The SDK launches KRDPASS. The user authenticates there.
 5. The SDK returns an authorization code to your app.
 6. Your app sends only `code`, `codeVerifier` and `state` to your backend, which exchanges

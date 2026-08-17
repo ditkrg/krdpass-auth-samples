@@ -22,10 +22,9 @@ enum Config {
     private static let isPreview =
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
-    /// Fail on the first missing or still-placeholder value, with the same wording every
-    /// sample in this repo uses: what is missing, which file supplies it, and how to generate
-    /// it. Silently falling back to `your-backend.example.com` only converts a config mistake
-    /// into a DNS error three screens later, which teaches nothing.
+    /// Fail on the first missing or still-placeholder value: what is missing, which file
+    /// supplies it, and how to generate it. Silently falling back to `your-backend.example.com`
+    /// only converts a config mistake into a DNS error three screens later.
     private static func require(_ key: String) -> String {
         let value = (ProcessInfo.processInfo.environment[key] ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)

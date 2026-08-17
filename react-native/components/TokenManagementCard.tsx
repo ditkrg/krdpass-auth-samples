@@ -5,11 +5,6 @@ import { ThemeColors } from '../theme/colors';
 import { UI } from '../theme/metrics';
 import { DemoButton } from './DemoButton';
 
-/**
- * A transient status line. `kind` is the state; `text` is only ever text.
- * Encoding "this failed" into the string would force the card to parse the
- * message back apart.
- */
 export type ActionMessage = { kind: 'ok' | 'error'; text: string };
 
 interface TokenManagementCardProps {

@@ -23,7 +23,6 @@ import { AuthBackendService } from './services/AuthBackendService';
 import type { ActionMessage } from './components/TokenManagementCard';
 import { DarkColors, LightColors } from './theme/colors';
 
-
 function messageFor(error: unknown): string {
   return error instanceof Error
     ? error.message
@@ -40,7 +39,6 @@ const decodeJwtForDisplay = (token: string): Record<string, any> => {
   }
 };
 
-// Initialize once: all SDK methods will use this config by default
 initialize({
   clientId: CLIENT_ID,
   redirectUri: REDIRECT_URI,
@@ -88,11 +86,6 @@ export default function App() {
     return scopes.join(' ');
   };
 
-  /**
-   * Sign in, handling each outcome on its own terms: a cancellation is not a
-   * failure, a timeout is retryable, and `provider_not_installed` carries the
-   * store URL that fixes it.
-   */
   const handleSignIn = async () => {
     if (isLoadingAction) return;
     setIsLoadingAction(true);
@@ -113,8 +106,7 @@ export default function App() {
           nonce,
         });
 
-        // The auth window matches the request_uri lifetime (floored at 1s), same as the
-        // Android/iOS/Flutter demos.
+        // The auth window matches the request_uri lifetime (floored at 1s).
         const authResponse = await KrdpassAuth.authenticate({
           requestUri: parResponse.requestUri,
           // The backend echoes the state it bound to the request; fall back to the one we
@@ -136,17 +128,14 @@ export default function App() {
           );
         }
 
-        // Fall back to the state we generated, never to '': the server rejects a blank
-        // state, and ours is the one the backend bound to the request.
         const result = await AuthBackendService.exchangeToken({
           code: authResponse.code,
-          state: authResponse.state ?? parResponse.state ?? state,
+          state: parResponse.state ?? state,
           codeVerifier: pkcePair.codeVerifier,
         });
 
         setTokens(result);
       } else {
-        // Direct mode (config comes from initialize())
         const result = await KrdpassAuth.signIn({
           scopes: getScopes(),
         });
@@ -227,7 +216,6 @@ export default function App() {
     if (!tokens || isLoadingUserInfo) return;
     setIsLoadingUserInfo(true);
     try {
-      // Note this goes through validAccessToken, not through tokens.accessToken.
       const result = await KrdpassAuth.getUserInfo({
         accessToken: await validAccessToken(tokens),
       });
@@ -240,10 +228,6 @@ export default function App() {
     }
   };
 
-  /**
-   * Refresh on demand, so the demo can show the exchange happening. Real code
-   * should not need this button: validAccessToken() refreshes at the point of use.
-   */
   const handleRefreshToken = async () => {
     if (isLoadingAction) return;
     if (!tokens?.refreshToken) {
@@ -296,7 +280,7 @@ export default function App() {
       clearSession();
       showOk('Tokens revoked, signed out');
     } catch (caught) {
-      // A failed revoke keeps the session (same as the Android/iOS/Flutter demos).
+      // A failed revoke keeps the session.
       showError(`Revoke failed: ${messageFor(caught)}`);
     } finally {
       setIsLoadingAction(false);
@@ -328,12 +312,6 @@ export default function App() {
     setActionMessage(null);
   };
 
-  /**
-   * Sign out. Clearing local state is the visible half; the half that matters
-   * is revoking the refresh token, which would otherwise keep working. There is
-   * no end-session endpoint here, so issued access tokens stay valid until they
-   * expire; if your deployment adds one, call it here as well.
-   */
   const handleLogout = () => {
     const session = tokens;
     clearSession();

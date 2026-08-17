@@ -2,25 +2,12 @@
 
 Reference Flutter app for **Sign in with KRDPASS**.
 
-## What This Sample Demonstrates
-
-- Server-mediated flow (recommended): backend performs PAR + token exchange
-- Client-only flow: the SDK performs PAR + PKCE + token exchange itself
-- PAR + PKCE integration
-- iOS Universal Link and Android Intent callback behavior
-
 ## Prerequisites
 
-- Flutter stable SDK
+- Flutter 3.44 or newer
 - KRDPASS app on test device/emulator
 - A publicly reachable HTTPS URL for the callback
 - A running backend that performs PAR + token exchange (see the integration guide linked below)
-
-## Onboarding
-
-You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
-this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
-for what to send to `integration@pass.krd`.
 
 ## Step-by-Step Setup
 
@@ -77,18 +64,14 @@ flutter run
 
 ## Notes
 
-- Keep `client_secret` and private keys on backend only. `.env` is declared as
-  a Flutter asset in `pubspec.yaml`, which means it is copied verbatim into the
-  APK and the IPA and can be extracted from either. Everything in it is public
-  by construction: a client id, a redirect URI, a backend URL. Nothing that has
-  to stay secret can live there.
+- `.env` is declared as a Flutter asset in `pubspec.yaml`, which means it is
+  copied verbatim into the APK and the IPA and can be extracted from either.
+  Everything in it is public by construction: a client id, a redirect URI, a
+  backend URL. Nothing that has to stay secret can live there.
 - Use your app's Universal Link host for `REDIRECT_URI` (iOS Associated Domains).
-- Keep the HTTPS origin, encoded path, and fixed query parameters exactly
-  matched to onboarding registration.
-- BFF token exchange sends only `code`, `codeVerifier`, and `state`; the BFF
-  recovers environment and redirect URI from server-side PAR state.
 
 ## Related Docs
 
 - Flutter SDK README: [krdpass-auth-sdk-flutter](https://github.com/ditkrg/krdpass-auth-sdk-flutter#readme)
 - Integration guide: <https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html>
+- Toolchain pins: [`../docs/BUILDING.md`](../docs/BUILDING.md#toolchain-pins)

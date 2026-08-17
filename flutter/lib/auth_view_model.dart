@@ -12,11 +12,7 @@ String _describe(Object e) => switch (e) {
   _ => e.toString(),
 };
 
-/// Owns the demo's auth session and SDK orchestration, off the widget tree, so the
-/// views stay a function of this state and the session survives a rebuild.
 class AuthViewModel extends ChangeNotifier {
-  /// The backend is a dependency, not a global: same shape as the Android and iOS
-  /// samples, and it is the seam a test would replace.
   final AuthBackendService _backend = AuthBackendService(
     baseUrl: Config.backendUrl,
   );
@@ -47,13 +43,10 @@ class AuthViewModel extends ChangeNotifier {
   String? get installUrl => _installUrl;
   ActionMessage? get actionMessage => _actionMessage;
 
-  /// A sign-in is in flight.
   bool get isSigningIn => _signingIn;
 
-  /// A UserInfo sync is in flight.
   bool get isLoadingUserInfo => _loadingUserInfo;
 
-  /// A token-management action (verify / refresh / revoke) is in flight.
   bool get isBusy => _busy;
 
   bool get includeCitizenScope => _includeCitizenScope;
@@ -81,9 +74,6 @@ class AuthViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Sign in, handling each outcome on its own terms: a cancellation is not a
-  /// failure, a timeout is retryable, and `provider_not_installed` carries the
-  /// install URL that fixes it.
   Future<void> signIn() async {
     if (_signingIn) return;
     _signingIn = true;
@@ -132,7 +122,7 @@ class AuthViewModel extends ChangeNotifier {
     final authTimeoutSeconds = parResponse.expiresIn ?? 300;
     final result = await KrdpassAuth.instance.authenticate(
       requestUri: parResponse.requestUri,
-      state: parResponse.state,
+      state: parResponse.state ?? state,
       timeout: Duration(
         seconds: authTimeoutSeconds < 1 ? 1 : authTimeoutSeconds,
       ),
@@ -228,8 +218,6 @@ class AuthViewModel extends ChangeNotifier {
     );
   }
 
-  /// Refresh on demand, so the demo can show the exchange happening. Real code
-  /// should not need this button: [_validAccessToken] refreshes at the point of use.
   Future<void> refreshToken() async {
     if (_busy) return;
     final current = _tokens;
@@ -251,8 +239,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// Revoke the session's tokens. The refresh token is the one that matters: it is the
-  /// long-lived credential, and revoking it is what ends the grant.
   Future<void> revokeToken() async {
     if (_busy) return;
     final current = _tokens;
@@ -321,10 +307,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// Sign out. Clearing the local fields is the visible half; the half that
-  /// matters is revoking the refresh token, which would otherwise keep working.
-  /// There is no end-session endpoint here, so issued access tokens stay valid
-  /// until they expire; if your deployment adds one, call it here as well.
   Future<void> logout() async {
     final session = _tokens;
     final useServerMode = _useServerMode;

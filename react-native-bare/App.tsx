@@ -108,11 +108,6 @@ export default function App() {
     }
   };
 
-  /**
-   * Sign in, handling each outcome on its own terms: a cancellation is not a
-   * failure, a timeout is retryable, and `provider_not_installed` carries the
-   * store URL that fixes it.
-   */
   const signIn = () => {
     setError(null);
     setInstallUrl(null);
@@ -153,7 +148,7 @@ export default function App() {
         result = await AuthBackendService.exchangeToken({
           code: authorization.code,
           codeVerifier: pkce.codeVerifier,
-          state: authorization.state ?? par.state ?? state,
+          state: par.state ?? state,
         });
       } else {
         result = await KrdpassAuth.signIn({ scopes });
@@ -232,7 +227,6 @@ export default function App() {
 
     setIsLoadingUserInfo(true);
     try {
-      // Note this goes through validAccessToken, not through tokens.accessToken.
       const accessToken = await validAccessToken(tokens);
       setUserInfo(await KrdpassAuth.getUserInfo({ accessToken }));
       showOk('User info synced');
@@ -243,10 +237,6 @@ export default function App() {
     }
   };
 
-  /**
-   * Refresh on demand, so the demo can show the exchange happening. Real code
-   * should not need this button: validAccessToken() refreshes at the point of use.
-   */
   const refresh = () =>
     runAction(
       async () => {
@@ -326,12 +316,6 @@ export default function App() {
       message => showError(`Revoke failed: ${message}`),
     );
 
-  /**
-   * Sign out. Clearing local state is the visible half; the half that matters
-   * is revoking the refresh token, which would otherwise keep working. There is
-   * no end-session endpoint here, so issued access tokens stay valid until they
-   * expire; if your deployment adds one, call it here as well.
-   */
   const signOut = () => {
     const session = tokens;
     clearSession();

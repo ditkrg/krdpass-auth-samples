@@ -174,11 +174,6 @@ export function ClaimSection({
   );
 }
 
-/**
- * A transient status line. `kind` is the state; `text` is only ever text.
- * Encoding "this failed" into the string would force this component to parse
- * the message back apart.
- */
 export type ActionMessage = { kind: 'ok' | 'error'; text: string };
 
 export function ActionMessageView({

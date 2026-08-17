@@ -77,7 +77,7 @@ fun MainScreen(viewModel: DemoViewModel) {
                     },
                 )
             } else {
-                // Keyed on the token: a JWT decode per recomposition is work nobody asked for.
+                // Keyed on the token.
                 val idClaims = remember(tokens.idToken) { claimsOf(tokens.idToken) }
                 val accessClaims = remember(tokens.accessToken) { claimsOf(tokens.accessToken) }
                 LoggedInDashboard(

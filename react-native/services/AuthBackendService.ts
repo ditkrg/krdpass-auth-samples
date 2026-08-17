@@ -48,6 +48,14 @@ async function describeError(response: Response): Promise<string> {
 const UNREACHABLE =
   "Can't reach the backend. Check your connection and that the server is running.";
 
+async function readTokenResult(response: Response): Promise<KrdpassTokenResult> {
+  const raw = await response.json();
+  if (typeof raw?.accessToken !== 'string' || raw.accessToken.length === 0) {
+    throw new Error('The backend returned no access token.');
+  }
+  return makeTokenResult(raw);
+}
+
 // POST JSON, mapping transport failures to a canonical message instead of the
 // raw "Network request failed".
 async function postJson(url: string, body: unknown): Promise<Response> {
@@ -126,7 +134,7 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return makeTokenResult(await response.json());
+    return readTokenResult(response);
   }
 
   /**
@@ -148,7 +156,7 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return makeTokenResult(await response.json());
+    return readTokenResult(response);
   }
 
   static async revokeToken(params: {

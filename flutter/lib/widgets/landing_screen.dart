@@ -245,7 +245,6 @@ class _ErrorCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon chip: soft error tint so it reads as an accent.
           Container(
             width: 36,
             height: 36,

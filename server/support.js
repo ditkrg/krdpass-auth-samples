@@ -10,8 +10,6 @@
 
 import { UpstreamError } from './cas.js';
 
-// Configuration
-
 export const CLIENT_ID = process.env.CLIENT_ID;
 export const CLIENT_SECRET = process.env.CLIENT_SECRET;
 export const SCOPE = (process.env.DEFAULT_SCOPE || 'openid profile').trim();
@@ -67,8 +65,6 @@ export const JWT_ALGORITHM = 'RS256';
 export const ID_TOKEN_CLOCK_TOLERANCE_SECONDS = 30;
 export const REQUEST_JWT_LIFETIME_SECONDS = 5 * 60;
 
-// Logging helpers
-
 export const maskState = (state) => {
   if (!state) return 'null';
   const value = String(state);
@@ -99,8 +95,6 @@ export const logSafeError = (message, err) => {
   console.error(message, sanitizeErrorForLog(err));
 };
 
-// Response helpers
-
 // JSON only, no cookies, no HTML: only the transport and content-sniffing
 // headers apply. CSP, frameguard, COOP and CORP govern documents, and there is
 // no document here.
@@ -120,8 +114,6 @@ export const sendJson = (res, status, payload) => {
   });
   res.end(body);
 };
-
-// Client-facing error helpers
 
 // Every failure uses the OAuth error shape from RFC 6749 section 5.2. The log
 // gets the detail; the client gets a code and a fixed description, never an
@@ -169,8 +161,6 @@ export const isAllowedRedirectUri = (redirectUri) => {
     return false;
   }
 };
-
-// Request body reading
 
 // Malformed or oversized bodies are a failure the caller can fix, so they keep
 // a 4xx instead of being flattened into a 500.

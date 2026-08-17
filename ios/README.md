@@ -2,27 +2,12 @@
 
 Reference iOS app for **Sign in with KRDPASS**.
 
-## What This Sample Demonstrates
-
-- Server-mediated flow (recommended): backend performs PAR + token exchange
-- Client-only flow: the SDK performs PAR + PKCE + token exchange itself
-- Both flows are switchable via the in-app Auth Mode toggle
-- Token refresh, token revocation, and userinfo fetch (in both modes)
-- Universal Link callback handling
-- PKCE and backend token exchange pattern
-
 ## Prerequisites
 
 - Xcode 26+ (Swift 6.2 toolchain)
 - iOS 17.0+ simulator or device (the sample's deployment target)
 - A running backend that performs PAR + the token exchange for the server-mediated flow (see the protocol reference under "Related Docs")
 - KRDPASS onboarding-approved credentials
-
-## Onboarding
-
-You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
-this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
-for what to send to `integration@pass.krd`.
 
 ## Step-by-Step Setup
 
@@ -77,11 +62,6 @@ To run on a real iPhone:
    The AASA `appID` has to be updated to match.
 4. Satisfy the three prerequisites above, then build + run, complete a sign-in round trip,
    and confirm the callback returns into the app (not Safari).
-
-## Notes
-
-- Keep `client_secret` and private keys on backend only.
-- Use HTTPS redirect URI that exactly matches onboarding registration.
 
 ## Related Docs
 

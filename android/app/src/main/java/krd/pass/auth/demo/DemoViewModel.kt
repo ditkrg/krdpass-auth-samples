@@ -20,11 +20,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * A transient status line. [ok] is the state; [text] is only ever text.
- * Encoding "this failed" into the string would force the UI to parse the
- * message back apart.
- */
 data class ActionMessage(val ok: Boolean, val text: String)
 
 /**
@@ -67,13 +62,9 @@ data class DisplayIdentity(
     }
 }
 
-/** Immutable UI state for the demo screen: the single source of truth the ViewModel emits. */
 data class DemoUiState(
-    /** A sign-in is in flight. */
     val signingIn: Boolean = false,
-    /** A UserInfo sync is in flight. */
     val loadingUserInfo: Boolean = false,
-    /** A token-management action (verify / refresh / revoke) is in flight. */
     val busy: Boolean = false,
     val tokens: KrdpassTokenResult? = null,
     val userInfo: KrdpassUserInfo? = null,
@@ -92,14 +83,6 @@ data class DemoUiState(
     val useServerMode: Boolean = true,
 )
 
-/**
- * Owns the demo's auth/session state and SDK orchestration, off the Activity, so the session
- * survives configuration changes (rotation) and the UI is a pure function of [uiState].
- *
- * `KrdpassAuth.register()` still happens in the Activity (it needs the Activity), but every flow
- * runs here on [viewModelScope]. Calls that drive the Activity result launcher
- * (`signIn` / `authenticate`) stay on the main dispatcher; only backend HTTP is moved to IO.
- */
 class DemoViewModel : ViewModel() {
 
     private val redirectUri = BuildConfig.REDIRECT_URI
@@ -132,11 +115,6 @@ class DemoViewModel : ViewModel() {
 
     fun setServerMode(enabled: Boolean) = _uiState.update { it.copy(useServerMode = enabled) }
 
-    /**
-     * Sign in, handling each outcome on its own terms: a cancellation is not a
-     * failure, a timeout is retryable, and `provider_not_installed` carries the
-     * store URL that fixes it.
-     */
     fun signIn() {
         val options = _uiState.value
         if (options.signingIn) return
@@ -206,7 +184,7 @@ class DemoViewModel : ViewModel() {
         // this stops compiling instead of silently landing in an `else`.
         return when (
             val authResult = KrdpassAuth.authenticate(
-                parResponse.requestUri, parResponse.state, timeoutMillis = authTimeoutMillis)
+                parResponse.requestUri, parResponse.state ?: state, timeoutMillis = authTimeoutMillis)
         ) {
             is AuthResult.Success -> withContext(Dispatchers.IO) {
                 backendService.exchangeToken(
@@ -284,12 +262,8 @@ class DemoViewModel : ViewModel() {
             KrdpassAuth.refreshTokens(refreshToken, current.scope)
         }
 
-    /**
-     * Refresh on demand, so the demo can show the exchange happening. Real code
-     * should not need this button: [validAccessToken] refreshes at the point of use.
-     */
     fun refreshToken() {
-        if (_uiState.value.busy) return // guard a double-tap firing two concurrent requests
+        if (_uiState.value.busy) return
         val current = _uiState.value.tokens
         val refreshToken = current?.refreshToken
         if (refreshToken == null) {
@@ -311,12 +285,8 @@ class DemoViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Revoke the session's tokens. The refresh token is the one that matters: it is the
-     * long-lived credential, and revoking it is what actually ends the grant.
-     */
     fun revokeToken() {
-        if (_uiState.value.busy) return // guard a double-tap firing two concurrent requests
+        if (_uiState.value.busy) return
         val tokens = _uiState.value.tokens
         if (tokens == null) {
             showStatus(ActionMessage(false, "No token to revoke"))
@@ -360,7 +330,7 @@ class DemoViewModel : ViewModel() {
     }
 
     fun verifyToken() {
-        if (_uiState.value.busy) return // guard a double-tap firing two concurrent requests
+        if (_uiState.value.busy) return
         val idToken = _uiState.value.tokens?.idToken
         if (idToken == null) {
             showStatus(ActionMessage(false, "No ID token to verify"))
@@ -383,12 +353,6 @@ class DemoViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Sign out. Clearing the local fields is the visible half; the half that
-     * matters is revoking the refresh token, which would otherwise keep working.
-     * There is no end-session endpoint here, so issued access tokens stay valid
-     * until they expire; if your deployment adds one, call it here as well.
-     */
     fun logout() {
         val tokens = _uiState.value.tokens
         val serverMode = _uiState.value.useServerMode

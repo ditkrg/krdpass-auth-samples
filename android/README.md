@@ -2,13 +2,6 @@
 
 Reference Android app for **Sign in with KRDPASS**.
 
-## What This Sample Demonstrates
-
-- Server-mediated flow (recommended): backend performs PAR + token exchange
-- Client-only flow: the SDK performs PAR + PKCE + token exchange itself
-- PKCE generation and auth handling
-- UserInfo and token inspection
-
 ## Prerequisites
 
 - A recent Android Studio (AGP 9 requires a 2025-or-newer release)
@@ -16,11 +9,7 @@ Reference Android app for **Sign in with KRDPASS**.
 - KRDPASS app on device/emulator
 - Running backend (recommended: `server`)
 
-## Onboarding
-
-You need a `clientId`, approved scopes and a registered HTTPS `redirectUri` before
-this sample can sign in. See the [integration guide](../docs/INTEGRATION.md#onboarding)
-for what to send to `integration@pass.krd`.
+See [`docs/BUILDING.md`](../docs/BUILDING.md#toolchain-pins) for toolchain pins.
 
 ## Step-by-Step Setup
 
@@ -75,16 +64,12 @@ registered, so sign-in then fails with `invalid_client`. See `key.properties.exa
 
 ## Notes
 
-- Keep `client_secret` on backend only.
-- Use the exact registered HTTPS redirect URI. Same-host alternate paths or
-  modified fixed query parameters are rejected.
 - For cross-platform deployments, keep `redirectUri` host aligned with the app's registered Universal Link domain.
 - Android completes callback through Intent result, but OAuth policy still requires `redirectUri`.
-- BFF token exchange sends only `code`, `codeVerifier`, and `state`; the BFF
-  recovers environment and redirect URI from server-side PAR state.
 
 ## Related Docs
 
 - Android SDK README: https://github.com/ditkrg/krdpass-auth-sdk-android#readme
 - Integration guide: `../docs/INTEGRATION.md`
+- Toolchain pins: `../docs/BUILDING.md#toolchain-pins`
 - Server reference: `../server/README.md`

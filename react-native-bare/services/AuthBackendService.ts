@@ -19,7 +19,7 @@ async function describeError(response: Response): Promise<string> {
       error?: string;
       error_description?: string;
     };
-    const detail = payload.error_description ?? payload.error;
+    const detail = payload.error_description || payload.error;
     if (detail) {
       return `${detail} (HTTP ${response.status})`;
     }
@@ -28,9 +28,15 @@ async function describeError(response: Response): Promise<string> {
   }
 
   if (response.status >= 500) {
-    return `The backend is unavailable right now (HTTP ${response.status}).`;
+    return `The backend is unavailable right now. Make sure the backend server is running and reachable. (HTTP ${response.status})`;
   }
-  return response.statusText || `Request failed (HTTP ${response.status}).`;
+  if (response.status === 401 || response.status === 403) {
+    return `The backend rejected this request (not authorized). (HTTP ${response.status})`;
+  }
+  if (response.status === 404) {
+    return `Backend endpoint not found. Check the backend URL. (HTTP ${response.status})`;
+  }
+  return `${response.statusText || 'Request failed'} (HTTP ${response.status})`;
 }
 
 async function postJson(url: string, body: unknown): Promise<Response> {
@@ -42,9 +48,17 @@ async function postJson(url: string, body: unknown): Promise<Response> {
     });
   } catch {
     throw new Error(
-      'Cannot reach the sample backend. Check the device connection and server URL.',
+      "Can't reach the backend. Check your connection and that the server is running.",
     );
   }
+}
+
+async function readTokenResult(response: Response): Promise<KrdpassTokenResult> {
+  const raw = await response.json();
+  if (typeof raw?.accessToken !== 'string' || raw.accessToken.length === 0) {
+    throw new Error('The backend returned no access token.');
+  }
+  return makeTokenResult(raw);
 }
 
 export class AuthBackendService {
@@ -101,10 +115,7 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    // makeTokenResult, not a cast: the BFF's JSON has no receivedAt and no isExpired,
-    // so casting it to KrdpassTokenResult compiles and then throws at the first
-    // isExpired() call. The SDK stamps receipt time on this device.
-    return makeTokenResult(await response.json());
+    return readTokenResult(response);
   }
 
   /**
@@ -125,7 +136,7 @@ export class AuthBackendService {
       throw new Error(await describeError(response));
     }
 
-    return makeTokenResult(await response.json());
+    return readTokenResult(response);
   }
 
   static async revokeToken(params: {

@@ -26,6 +26,19 @@ Only what the sample you are building needs:
 | `react-native`, `react-native-bare` | Node.js 24+, plus the Android and iOS prerequisites |
 | `server` | Node.js 24+ |
 
+## Toolchain pins
+
+The samples do not all use the same Kotlin or Gradle version, and the differences
+are deliberate. Check this table before "aligning" them: two of the pins below
+break the build when raised.
+
+| Where | Pin | Why |
+| --- | --- | --- |
+| `flutter/android/settings.gradle.kts` | Kotlin 2.4.10, **must be declared** | AGP 9 bundles Kotlin 2.2.10, which is below Flutter's 2.2.20 minimum. Omit `org.jetbrains.kotlin.android` and current Flutter fails the Android build. Same pin lives in the Flutter SDK's `example/android/settings.gradle.kts`. |
+| `flutter/android/app/build.gradle.kts` | AGP id written `com.android.applic\u0061tion` | Flutter 3.44 scans this block as text and injects legacy KGP when it sees the literal `com.android.application`, which undoes the pin above. Same escape belongs in the Flutter SDK example. |
+| `react-native/android`, `react-native-bare/android` | Gradle **9.3.1**, not 9.6.1 | **Load-bearing.** Gradle 9.6.1 ships kotlin-stdlib 2.3.x, whose metadata React Native's own Gradle plugin (compiled with Kotlin 2.1.0) cannot read. Raising this fails `:gradle-plugin:settings-plugin:compileKotlin`. Follows React Native's toolchain, not Gradle's latest. |
+| everything else | Gradle 9.6.1 | Current release. |
+
 ## Configure
 
 Each sample reads its `clientId`, `redirectUri` and backend URL from local, gitignored

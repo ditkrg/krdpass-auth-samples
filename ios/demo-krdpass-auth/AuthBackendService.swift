@@ -143,7 +143,7 @@ struct ParResponseDTO: Decodable, Sendable {
 }
 
 struct TokenResponseDTO: Decodable, Sendable {
-    let accessToken: String
+    let accessToken: String?
     let tokenType: String?
     let expiresIn: Int?
     let refreshToken: String?
@@ -151,7 +151,8 @@ struct TokenResponseDTO: Decodable, Sendable {
     let scope: String?
 
     var asDictionary: [String: Any] {
-        var dict: [String: Any] = ["accessToken": accessToken]
+        var dict: [String: Any] = [:]
+        if let accessToken = accessToken { dict["accessToken"] = accessToken }
         if let tokenType = tokenType { dict["tokenType"] = tokenType }
         if let expiresIn = expiresIn { dict["expiresIn"] = expiresIn }
         if let refreshToken = refreshToken { dict["refreshToken"] = refreshToken }

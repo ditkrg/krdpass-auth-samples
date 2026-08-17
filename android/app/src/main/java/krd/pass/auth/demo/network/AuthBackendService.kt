@@ -151,17 +151,23 @@ class AuthBackendService(
      * reference server's contract, and also accepting snake_case would only
      * hide the day the two stop agreeing.
      */
-    private fun parseTokens(json: JSONObject): KrdpassTokenResult = KrdpassTokenResult(
-        accessToken = json.optString("accessToken"),
-        idToken = json.optString("idToken").takeIf { it.isNotBlank() },
-        tokenType = json.optString("tokenType", "Bearer"),
-        expiresIn = json.optInt("expiresIn", DEFAULT_EXPIRES_IN_SECONDS),
-        refreshToken = json.optString("refreshToken").takeIf { it.isNotBlank() },
-        scope = json.optString("scope").takeIf { json.has("scope") },
-        // receivedAt defaults to now. Leave it: it is a stamp from THIS device's clock, and
-        // isExpired() compares receivedAt + expiresIn against this device's clock too. A
-        // backend-supplied value would mix two clocks.
-    )
+    private fun parseTokens(json: JSONObject): KrdpassTokenResult {
+        val accessToken = json.optString("accessToken")
+        if (accessToken.isBlank()) {
+            throw IOException("The backend returned no access token.")
+        }
+        return KrdpassTokenResult(
+            accessToken = accessToken,
+            idToken = json.optString("idToken").takeIf { it.isNotBlank() },
+            tokenType = json.optString("tokenType", "Bearer"),
+            expiresIn = json.optInt("expiresIn", DEFAULT_EXPIRES_IN_SECONDS),
+            refreshToken = json.optString("refreshToken").takeIf { it.isNotBlank() },
+            scope = json.optString("scope").takeIf { json.has("scope") },
+            // receivedAt defaults to now. Leave it: it is a stamp from THIS device's clock, and
+            // isExpired() compares receivedAt + expiresIn against this device's clock too. A
+            // backend-supplied value would mix two clocks.
+        )
+    }
 
     private suspend fun makeRequest(request: Request): String = suspendCancellableCoroutine { continuation ->
         val call = httpClient.newCall(request)

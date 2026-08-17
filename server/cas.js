@@ -22,8 +22,6 @@ import {
   maskState,
 } from './support.js';
 
-// CAS HTTP client (native fetch)
-
 // fetch resolves for a 4xx or 5xx, so a CAS rejection must throw explicitly.
 // The property is upstreamStatus, not status, so a local error that happens to
 // carry a status can never be mistaken for a CAS response.
@@ -84,8 +82,6 @@ export const casHttp = {
   post: (url, body) => casRequest('POST', url, body),
 };
 
-// JWT (RS256 only, on node:crypto)
-
 const base64UrlJson = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
 
 // crypto.sign with the sha256 digest and PKCS#1 v1.5 padding on an RSA key is
@@ -129,8 +125,6 @@ const parseCompactJws = (token) => {
     signingInput: `${parts[0]}.${parts[1]}`,
   };
 };
-
-// OAuth Functions
 
 /**
  * Creates a signed JWT containing the OAuth request parameters.
@@ -185,11 +179,7 @@ export async function pushAuthorizationRequest({ state, nonce, code_challenge, c
   return data;
 }
 
-/**
- * Exchanges the authorization code for tokens.
- */
 export async function exchangeCodeForTokens({ code, code_verifier, authServerUrl, redirectUri }, httpClient = casHttp) {
-  console.log('[CAS TOKEN] Requesting tokens with code...');
   const { data } = await httpClient.post(
     `${authServerUrl}/connect/token`,
     new URLSearchParams({
@@ -202,24 +192,10 @@ export async function exchangeCodeForTokens({ code, code_verifier, authServerUrl
     })
   );
 
-  console.log('[CAS TOKEN] Raw response keys:', Object.keys(data));
-  if (data.refresh_token) {
-    console.log('[CAS TOKEN] SUCCESS: refresh_token received');
-  } else {
-    console.log('[CAS TOKEN] WARNING: refresh_token NOT received');
-  }
-  if (data.scope) {
-    console.log('[CAS TOKEN] Granted scope:', data.scope);
-  }
-
   return data;
 }
 
-/**
- * Refreshes tokens using a refresh token.
- */
 export async function refreshTokens({ refreshToken, scope, authServerUrl }, httpClient = casHttp) {
-  console.log('[CAS REFRESH] Requesting new tokens...');
   const { data } = await httpClient.post(
     `${authServerUrl}/connect/token`,
     new URLSearchParams({
@@ -234,15 +210,10 @@ export async function refreshTokens({ refreshToken, scope, authServerUrl }, http
     })
   );
 
-  console.log('[CAS REFRESH] Success');
   return data;
 }
 
-/**
- * Revokes an access or refresh token.
- */
 export async function revokeToken({ token, tokenTypeHint, authServerUrl }, httpClient = casHttp) {
-  console.log('[CAS REVOKE] Revoking token...');
   await httpClient.post(
     `${authServerUrl}/connect/revocation`,
     new URLSearchParams({
@@ -254,7 +225,6 @@ export async function revokeToken({ token, tokenTypeHint, authServerUrl }, httpC
       ...(tokenTypeHint ? { token_type_hint: tokenTypeHint } : {}),
     })
   );
-  console.log('[CAS REVOKE] Success');
 }
 
 export const deriveS256Challenge = (codeVerifier) =>

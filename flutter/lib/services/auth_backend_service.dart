@@ -134,7 +134,17 @@ class AuthBackendService {
       throw BackendException(_describeError(response));
     }
 
-    final tokenData = jsonDecode(response.body) as Map<String, dynamic>;
+    return _readTokenResult(response.body);
+  }
+
+  /// fromJson throws a FormatException, whose `toString()` the UI would show with its type
+  /// prefix.
+  KrdpassTokenResult _readTokenResult(String body) {
+    final tokenData = jsonDecode(body) as Map<String, dynamic>;
+    final accessToken = tokenData['accessToken'];
+    if (accessToken is! String || accessToken.isEmpty) {
+      throw BackendException('The backend returned no access token.');
+    }
     return KrdpassTokenResult.fromJson(tokenData);
   }
 
@@ -155,8 +165,7 @@ class AuthBackendService {
       throw BackendException(_describeError(response));
     }
 
-    final tokenData = jsonDecode(response.body) as Map<String, dynamic>;
-    return KrdpassTokenResult.fromJson(tokenData);
+    return _readTokenResult(response.body);
   }
 
   /// [tokenTypeHint] is required, with no default: a "sign out" has to revoke the refresh

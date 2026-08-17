@@ -41,24 +41,7 @@ When reporting a security vulnerability, please include:
 
 **No SDK persists tokens.** That is deliberate: the SDK returns tokens to you
 and forgets them, so it never becomes the component that chose your storage.
-You have to persist a refresh token somewhere, and the default choices on both
-platforms are readable on a rooted or jailbroken device and are included in
-cloud backups. Use these instead:
-
-| Platform | Use | Not |
-|---|---|---|
-| Android | Encrypt with a key held in the Android Keystore | `SharedPreferences`, files in `getFilesDir()` |
-| iOS | Keychain with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | `UserDefaults`, plist files |
-| Flutter | `flutter_secure_storage` with `IOSOptions(accessibility: .first_unlock_this_device)`; the default `AndroidOptions()` is correct as of 10.x | `shared_preferences` |
-| React Native | `expo-secure-store` or `react-native-keychain` | `AsyncStorage` |
-
-On Android, do not reach for `androidx.security:security-crypto`
-(`EncryptedSharedPreferences`, `MasterKey`). Every API in that library was
-deprecated in 1.1.0 in favour of the platform APIs and direct Android Keystore
-use, so it should not be adopted for new work.
-
-The `ThisDeviceOnly` suffix on iOS is what keeps the item out of iCloud Keychain
-sync. Without it the refresh token leaves the device.
+How to persist a refresh token is in [Token storage](TOKEN-STORAGE.md).
 
 Beyond storage:
 

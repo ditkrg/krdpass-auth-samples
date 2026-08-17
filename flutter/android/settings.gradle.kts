@@ -33,6 +33,8 @@ if (krdpassSdkDir != null) {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.3.1" apply false
+    // Must be declared: AGP 9 bundles Kotlin 2.2.10, below Flutter's 2.2.20 minimum.
+    id("org.jetbrains.kotlin.android") version "2.4.10" apply false
 }
 
 include(":app")

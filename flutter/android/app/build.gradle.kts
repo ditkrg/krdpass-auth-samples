@@ -35,10 +35,7 @@ android {
     }
 
     defaultConfig {
-        // Set a unique application ID for your own integration app.
         applicationId = "krd.pass.auth.demo"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
