@@ -24,7 +24,7 @@
     "krdpass-auth-react-native": "git+https://github.com/ditkrg/krdpass-auth-sdk-react-native.git#v1.5.0",
     "react": "19.2.3",
     "react-native": "0.86.0",
-    "react-native-get-random-values": "~1.11.0",
+    "react-native-get-random-values": "~2.0.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },
