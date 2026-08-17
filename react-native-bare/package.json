@@ -13,7 +13,7 @@
   "dependencies": {
     "@react-native-vector-icons/material-icons": "13.1.2",
     "krdpass-auth-react-native": "git+https://github.com/ditkrg/krdpass-auth-sdk-react-native.git#v1.5.0",
-    "react": "19.2.3",
+    "react": "19.2.8",
     "react-native": "0.86.0",
     "react-native-config": "^1.6.1",
     "react-native-get-random-values": "~1.11.0",
