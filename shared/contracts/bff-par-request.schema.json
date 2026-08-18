@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pass.krd/schemas/bff-par-request.schema.json",
+  "title": "KRDPass sample BFF PAR request",
+  "description": "Public mobile-client request to POST /oauth/par. The BFF signs and pushes the authorization request to CAS and returns a request_uri. codeChallengeMethod, state and nonce are optional: the server defaults codeChallengeMethod to S256 and generates state or nonce when omitted. environment matching is case-insensitive.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "codeChallenge",
+    "environment",
+    "redirectUri"
+  ],
+  "properties": {
+    "codeChallenge": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "codeChallengeMethod": {
+      "type": "string",
+      "enum": [
+        "S256"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 256
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 256
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "production",
+        "prod",
+        "development",
+        "dev"
+      ]
+    },
+    "redirectUri": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Space-separated scopes. Must include openid. Omitted means the server's own default scope, which already includes openid."
+    }
+  },
+  "examples": [
+    {
+      "codeChallenge": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFG",
+      "codeChallengeMethod": "S256",
+      "state": "random-state",
+      "nonce": "random-nonce",
+      "environment": "production",
+      "redirectUri": "https://client.example.test/oauth/krdpass/callback"
+    }
+  ]
+}

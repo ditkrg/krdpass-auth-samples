@@ -1,0 +1,101 @@
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+*.dart_tool/
+build/
+pubspec_overrides.yaml
+
+# Android
+*.apk
+*.aab
+*.class
+*.log
+*.jar
+*.aar
+local.properties
+.gradle/
+**/.cxx/
+**/build/
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+!flutter/android/gradle/wrapper/gradle-wrapper.jar
+!flutter/android/gradlew
+!flutter/android/gradlew.bat
+!react-native/android/gradle/wrapper/gradle-wrapper.jar
+!react-native/android/gradlew
+!react-native/android/gradlew.bat
+!react-native-bare/android/gradle/wrapper/gradle-wrapper.jar
+!react-native-bare/android/gradlew
+!react-native-bare/android/gradlew.bat
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+
+# iOS
+**/ios/Flutter/.last_build_id
+**/ios/.generated/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/engine/
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Podfile.lock
+# Ignore generated Xcode workspaces, but tunnel down to the native iOS sample's
+# resolved SPM graph (an app should commit it for reproducible builds; a library should not).
+**/*.xcworkspace
+!ios/demo-krdpass-auth.xcodeproj/project.xcworkspace/
+!ios/demo-krdpass-auth.xcodeproj/project.xcworkspace/xcshareddata/
+!ios/demo-krdpass-auth.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+# The Flutter template's own workspace is checked in upstream and is what
+# `flutter build ios` opens; without it a clean clone cannot build.
+!flutter/ios/Runner.xcworkspace/
+!flutter/ios/Runner.xcworkspace/contents.xcworkspacedata
+**/*.xcuserdata
+DerivedData/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+!ios/demo-krdpass-auth.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+
+# Coverage
+coverage/
+*.lcov
+
+# Artifacts
+*.zip
+*.tar.gz
+
+# Secrets & Env
+.env
+.env.*
+!.env.example
+key.properties
+config.properties
+*.jks
+*.keystore
+**/private-key.pem
+**/private-key.key
+
+# Node
+node_modules/
+
+# deslop local analysis cache
+.deslop/
