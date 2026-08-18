@@ -1,0 +1,11 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    // __tests__/ runs on the node:test runner, so the Node types have to be in scope.
+    "types": ["node"],
+    // Node's ESM resolver needs the real extension on the shared test helper the
+    // vector suite imports, and nothing here is emitted.
+    "allowImportingTsExtensions": true
+  }
+}
