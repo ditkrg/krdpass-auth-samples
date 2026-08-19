@@ -23,7 +23,7 @@
     "expo-system-ui": "~57.0.2",
     "krdpass-auth-react-native": "git+https://github.com/ditkrg/krdpass-auth-sdk-react-native.git#v1.6.0",
     "react": "19.2.3",
-    "react-native": "0.86.2",
+    "react-native": "0.87.0",
     "react-native-get-random-values": "~1.11.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
