@@ -59,6 +59,7 @@ cp .env.example .env
 | `DEFAULT_SCOPE` | No | Default scope used when `/oauth/par` request omits `scope` (default: `openid profile`) |
 | `AUTH_TRANSACTION_TTL_MS` | No | BFF transaction lifetime in ms (default 5 minutes, clamped to 30 seconds to 10 minutes and never longer than CAS PAR expiry) |
 | `OIDC_METADATA_CACHE_TTL_MS` | No | CAS discovery metadata cache lifetime in ms (default 1 hour) |
+| `CAS_HTTP_TIMEOUT_MS` | No | Hard timeout on every call to CAS, in ms (default 10 seconds) |
 | `DEMO_EXTRAS` | No | Set `true` only if serving AASA/assetlinks from this server |
 | `DEMO_IOS_APP_IDS` | If `DEMO_EXTRAS=true` | Comma-separated iOS app IDs (`TEAM_ID.bundle.id`) |
 | `DEMO_IOS_TEAM_ID` + `DEMO_IOS_BUNDLE_ID` | If `DEMO_EXTRAS=true` | Single-app fallback for iOS |
@@ -92,7 +93,12 @@ certificate registered on your client, so `client-cert.pem` is what onboarding n
 the certificate rather than the public key on its own. The subject is yours to choose, and
 `-days` should match your rotation policy.
 
-Keep `private-key.pem` on the server and put it into `.env` as one escaped line:
+Keep `private-key.pem` on the server and put it into `.env` as one escaped line. This prints
+it in the form `.env` wants, with literal `\n` rather than real line breaks:
+
+```bash
+awk 'NF {sub(/\r/,""); printf "%s\\n",$0;}' private-key.pem
+```
 
 ```env
 RSA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
