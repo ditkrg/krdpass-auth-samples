@@ -38,7 +38,7 @@ Security policy and vulnerability reporting: [docs/SECURITY.md](docs/SECURITY.md
 
 - [Protocol specification](docs/specs/sdk-auth-api.md), the shared contract all four SDKs implement.
 - [Token storage](docs/TOKEN-STORAGE.md), because no SDK persists tokens for you.
-- [DIT Digital Service Manual](https://docs.digital.gov.krd/software-development/04-interoperability/10-krdpass), official KRDPASS policy.
+- [DIT Digital Service Manual](https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass), official policy for this flow.
 
 ## License
 

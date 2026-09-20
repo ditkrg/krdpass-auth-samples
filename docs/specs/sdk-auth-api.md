@@ -1,6 +1,6 @@
 # KRDPASS Auth SDK Protocol Specification
 
-**Applies to:** SDK 1.5.x
+**Applies to:** SDK 1.6.x
 **Status:** Canonical Reference
 
 This document defines the shared API surface, error handling patterns, and security protocols that all KRDPASS Auth SDKs (Android, iOS, Flutter, React Native) adhere to. It serves as a reference for contributors and power users understanding the underlying contract.
@@ -85,8 +85,9 @@ four conventions.
 - `getUserInfo(accessToken)`: retrieves user profile claims. The typed fields
   are a convenience view; the full claim set is always on `raw`. Includes a
   typed `upns` field alongside the existing `upn`: an array of strings, empty
-  when the `citizen_identity` claim carries none. The developer manual sets a
-  different mandatory rule for each of the two claims. `upn` MUST be stored and
+  when the citizen has no prior UPNs. Both claims are issued whatever scopes
+  were granted; neither requires `citizen_identity`. The developer manual sets
+  a different mandatory rule for each of the two claims. `upn` MUST be stored and
   MUST be displayed in all citizen-facing and administrative interfaces; it is
   the primary searchable citizen reference. `upns` MUST be stored and MUST
   never be displayed; it exists for audit, data reconciliation, and recovery.
@@ -152,7 +153,7 @@ a defect in one of the two.
 | `issuer_mismatch` | All | Response carried an RFC 9207 `iss` that is not the configured environment's authorization server (possible mix-up attack) | Fail closed and restart |
 | `nonce_mismatch` | All | The id_token carried a `nonce` that is not the one this client sent (possible token replay) | Fail closed and restart |
 | `invalid_id_token` | All | The id_token failed verification: signature, `iss`, `aud`, `exp`, or it was absent from the token response | Fail closed and restart |
-| `invalid_redirect` | All | Redirect URI does not match the exact configured endpoint (scheme, host, port, path, and fixed query) | Check onboarding config |
+| `invalid_redirect` | Android | Redirect URI does not match the exact configured endpoint (scheme, host, port, path, and fixed query). The iOS core leaves a non-matching callback unhandled, so the same mismatch surfaces as `cancelled` | Check onboarding config |
 | `invalid_request` | All | Malformed or blank request parameters | Fix the integration |
 | `request_expired` | All | The request_uri expired inside KRDPASS (NOT a cancellation) | Restart with a fresh PAR request |
 | `launch_failed` | All | The KRDPASS app could not be launched | Retry or check installation |
