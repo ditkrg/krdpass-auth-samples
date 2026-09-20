@@ -65,6 +65,8 @@ cp .env.example .env
 | `DEMO_ANDROID_APP_LINKS` | If `DEMO_EXTRAS=true` | Comma-separated `package|SHA256` pairs |
 | `DEMO_ANDROID_PACKAGE_NAME` + `DEMO_ANDROID_SHA256` | If `DEMO_EXTRAS=true` | Single-app fallback for Android |
 | `DEMO_UNAUTHENTICATED_TOKEN_ROUTES` | No | Set `true` to register `/oauth/token/refresh` and `/oauth/token/revoke`. Off by default; see the warning below. |
+| `DEMO_CALLBACK_CATCHER` | No | Set `true` to capture the authorization code KRDPASS delivers to your redirect URI, so a REST client can drive the flow with no sample app. Off by default; see "Driving the flow from a REST client". |
+| `DEMO_CALLBACK_PATH` | No | Path the catcher listens on, default `/_krdpass/oauth/callback`. Must match the path of your registered redirect URI. |
 
 **Refresh, revoke and sign-out return 404 until you opt in.** `DEMO_UNAUTHENTICATED_TOKEN_ROUTES`
 is `false` by default, and with it unset the two routes are not registered at all. Every
@@ -112,11 +114,47 @@ curl http://localhost:3000/health
 - `POST /oauth/token`
 - `POST /oauth/token/refresh` (only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true`)
 - `POST /oauth/token/revoke` (only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true`)
+- `GET <DEMO_CALLBACK_PATH>` (only when `DEMO_CALLBACK_CATCHER=true`)
+- `GET /_krdpass/demo/last-callback` (only when `DEMO_CALLBACK_CATCHER=true`)
 - `GET /health`
+
+## Driving the flow from a REST client
+
+The sample apps are not the only way to exercise this server. A REST client can
+run every step except the one that needs a person: PKCE and `state` generation,
+`POST /oauth/par`, and `POST /oauth/token`. What it cannot do is produce the
+authorization code, which only exists once someone authenticates in KRDPASS.
+
+`DEMO_CALLBACK_CATCHER=true` closes that gap. It registers a `GET` route at the
+path of your registered redirect URI, which is where KRDPASS sends the browser
+after sign-in. The route renders the `code` and `state` on a plain page and
+parks them in memory; `GET /_krdpass/demo/last-callback` returns them as JSON:
+
+```json
+{ "pending": false, "code": "...", "state": "...", "receivedAt": 1758326400000 }
+```
+
+The JSON route hands a capture out **once**. A second read answers
+`{ "pending": true }`, as does a capture older than `AUTH_TRANSACTION_TTL_MS`.
+That is deliberate: a leftover code from an abandoned attempt must not be
+exchanged by accident. Loading the page does not consume the capture.
+
+Two things have to be true for the redirect to arrive:
+
+- Your registered redirect URI must resolve to this process. It is an HTTPS URL
+  registered during onboarding, and this server binds to `127.0.0.1`, so a local
+  run needs a tunnel whose hostname is that registered host.
+- No app on the phone may claim that host. An installed sample app takes the
+  redirect through Universal Links or App Links, fails its own `state` check
+  because the transaction belongs to your REST client, and the catcher never
+  sees it.
+
+A ready-made Postman collection for this is in [`../postman`](../postman).
 
 ## Security and Policy Notes
 
 - **`POST /oauth/token/refresh` and `POST /oauth/token/revoke` are unauthenticated in this reference.** There is no session, cookie, bearer check, or CSRF protection in front of either. Anyone who can reach them can post any refresh token or token and this server will attach `CLIENT_SECRET` and act on it at CAS. Both routes are registered only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true` is set.
+- **The callback catcher is unauthenticated.** With `DEMO_CALLBACK_CATCHER=true`, anyone who can reach this server can read the last captured authorization code. That code alone buys an attacker nothing here, because the exchange also needs the PKCE `code_verifier` and this server's `CLIENT_SECRET`, but it is still a credential sitting in memory behind no auth. Local demo only, and the route is not registered without the flag.
 - In-memory transaction storage is capped and expires entries to limit local-dev growth. It is intentionally not suitable for production, restarts, horizontal scaling, or audit retention.
 - Default bind host is `127.0.0.1` for local development safety.
 - The `ALLOWED_REDIRECT_HOSTS` allowlist is required and fails closed. An empty or unset allowlist rejects every `redirectUri` rather than allowing any HTTPS host, and the server refuses to start without the variable.

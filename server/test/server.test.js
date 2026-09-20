@@ -709,3 +709,97 @@ test('maps a CAS timeout or transport failure to 502, never to a caller 4xx', as
     await fixture.close();
   }
 });
+
+const startCatcherServer = async () => {
+  const previous = process.env.DEMO_CALLBACK_CATCHER;
+  process.env.DEMO_CALLBACK_CATCHER = 'true';
+  // createApp reads the flag at call time, so the module cache is irrelevant.
+  const app = createApp({ httpClient: { get: async () => { throw new Error('unused'); }, post: async () => { throw new Error('unused'); } } });
+  if (previous === undefined) delete process.env.DEMO_CALLBACK_CATCHER;
+  else process.env.DEMO_CALLBACK_CATCHER = previous;
+
+  const server = await new Promise((resolve) => {
+    const listeningServer = app.listen(0, '127.0.0.1', () => resolve(listeningServer));
+  });
+  const { port } = server.address();
+  return {
+    baseUrl: `http://127.0.0.1:${port}`,
+    close: () => new Promise((resolve, reject) => server.close((err) => err ? reject(err) : resolve())),
+  };
+};
+
+test('leaves the callback catcher unregistered unless DEMO_CALLBACK_CATCHER=true', async () => {
+  const fixture = await startTestServer();
+  try {
+    for (const path of ['/_krdpass/oauth/callback', '/_krdpass/demo/last-callback']) {
+      const response = await fetch(`${fixture.baseUrl}${path}`);
+      assert.equal(response.status, 404, path);
+      assert.equal((await response.json()).error, 'not_found');
+    }
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('captures a redirect and hands the code out exactly once', async () => {
+  const fixture = await startCatcherServer();
+  try {
+    const empty = await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`);
+    assert.deepEqual(await empty.json(), { pending: true });
+
+    const page = await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback?code=auth-code-123&state=${state}`);
+    assert.equal(page.status, 200);
+    assert.equal(page.headers.get('cache-control'), 'no-store');
+    assert.match(page.headers.get('content-type'), /text\/html/);
+    const html = await page.text();
+    assert.match(html, /auth-code-123/);
+
+    const captured = await (await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`)).json();
+    assert.equal(captured.pending, false);
+    assert.equal(captured.code, 'auth-code-123');
+    assert.equal(captured.state, state);
+
+    const second = await (await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`)).json();
+    assert.deepEqual(second, { pending: true });
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('escapes redirect parameters before rendering them', async () => {
+  const fixture = await startCatcherServer();
+  try {
+    const injected = encodeURIComponent('<script>alert(1)</script>');
+    const page = await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback?code=abc&state=${injected}`);
+    const html = await page.text();
+    assert.ok(!html.includes('<script>alert(1)</script>'));
+    assert.match(html, /&lt;script&gt;/);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('reports an OAuth error redirect instead of a code', async () => {
+  const fixture = await startCatcherServer();
+  try {
+    const page = await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback?error=access_denied&error_description=User%20cancelled`);
+    assert.match(await page.text(), /access_denied/);
+
+    const captured = await (await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`)).json();
+    assert.equal(captured.error, 'access_denied');
+    assert.equal(captured.errorDescription, 'User cancelled');
+    assert.equal(captured.code, undefined);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('keeps the captured code out of caches', async () => {
+  const fixture = await startCatcherServer();
+  try {
+    const response = await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+  } finally {
+    await fixture.close();
+  }
+});

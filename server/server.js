@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 
 import { resolveExtrasRoutes } from './extras.js';
+import { CALLBACK_PATH, LAST_CALLBACK_PATH, createCallbackCatcher } from './callback-catcher.js';
 import {
   casHttp,
   deriveS256Challenge,
@@ -570,6 +571,14 @@ if (process.env.DEMO_UNAUTHENTICATED_TOKEN_ROUTES === 'true') {
 }
 
 route('GET', '/health', (req, res) => sendJson(res, 200, { status: 'ok' }));
+
+// Demo-only capture of the KRDPASS redirect, so a REST client can drive the
+// flow with no sample app installed. Off by default: see server/README.md.
+if (process.env.DEMO_CALLBACK_CATCHER === 'true') {
+  const catcher = createCallbackCatcher();
+  route('GET', CALLBACK_PATH, catcher.handleCallback);
+  route('GET', LAST_CALLBACK_PATH, catcher.handleLastCallback);
+}
 
 // Demo-only AASA and assetlinks documents, registered only when DEMO_EXTRAS is on.
 for (const [path, payload] of Object.entries(extras)) {
