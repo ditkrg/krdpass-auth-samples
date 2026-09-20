@@ -47,13 +47,17 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "if (!pm.variables.get('clientId') || !pm.variables.get('redirectUri')) {",
+                  "    throw new Error('Set clientId and redirectUri in the environment before sending this request.');",
+                  "}",
+                  "",
                   "const toBase64Url = (value) => value",
                   "    .replace(/\\+/g, '-')",
                   "    .replace(/\\//g, '_')",
                   "    .replace(/=+$/, '');",
                   "",
-                  "// The Postman app exposes a node-style `crypto` and warns on CryptoJS; newman's",
-                  "// sandbox ships neither that global nor a warning. Prefer it where it exists.",
+                  "// The Postman app exposes a node-style `crypto` and warns on CryptoJS;",
+                  "// newman's sandbox has no such global. Prefer it where it exists.",
                   "const useNodeCrypto = typeof crypto !== 'undefined'",
                   "    && typeof crypto.createHash === 'function'",
                   "    && typeof crypto.randomBytes === 'function';",
@@ -82,9 +86,6 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('clientId and redirectUri are set in the environment', function () {",
-                  "    pm.expect(pm.variables.get('clientId'), 'clientId').to.be.a('string').and.to.not.be.empty;",
-                  "    pm.expect(pm.variables.get('redirectUri'), 'redirectUri').to.be.a('string').and.to.not.be.empty;",
                   "});",
                   "",
                   "pm.test('PAR returned 200', function () {",
@@ -372,6 +373,8 @@
                   "pm.test('answers 400 invalid_request', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('codeChallengeMethod must be S256');",
                   "});"
                 ]
               }
@@ -417,6 +420,8 @@
                   "pm.test('answers 400 invalid_request', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('codeChallenge must be base64url');",
                   "});"
                 ]
               }
@@ -462,6 +467,8 @@
                   "pm.test('answers 400 invalid_scope', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_scope');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('scope must include openid');",
                   "});"
                 ]
               }
@@ -507,6 +514,8 @@
                   "pm.test('answers 400 invalid_request', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('environment must be one of');",
                   "});"
                 ]
               }
@@ -552,6 +561,8 @@
                   "pm.test('answers 400 invalid_request', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('redirectUri host is not in server allowlist');",
                   "});"
                 ]
               }
@@ -597,6 +608,8 @@
                   "pm.test('answers 400 invalid_request', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('authServerUrl override is not allowed');",
                   "});"
                 ]
               }
@@ -642,6 +655,8 @@
                   "pm.test('answers 400 invalid_request', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('Only code, codeVerifier, and state are allowed');",
                   "});"
                 ]
               }
@@ -687,6 +702,8 @@
                   "pm.test('answers 400 invalid_grant', function () {",
                   "    pm.response.to.have.status(400);",
                   "    pm.expect(pm.response.json().error).to.eql('invalid_grant');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('Invalid or expired state parameter');",
                   "});"
                 ]
               }

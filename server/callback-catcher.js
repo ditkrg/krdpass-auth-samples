@@ -13,6 +13,7 @@ export const CALLBACK_PATH = process.env.DEMO_CALLBACK_PATH || '/_krdpass/oauth/
 export const LAST_CALLBACK_PATH = '/_krdpass/demo/last-callback';
 
 const MAX_ERROR_LENGTH = 512;
+const MAX_ISS_LENGTH = 512;
 
 const HTML_ENTITIES = Object.freeze({
   '&': '&amp;',
@@ -76,27 +77,35 @@ export const createCallbackCatcher = () => {
   const handleCallback = (req, res) => {
     const params = new URL(req.url, 'http://localhost').searchParams;
 
-    captured = {
+    const arriving = {
       code: readParam(params, 'code', MAX_CODE_LENGTH),
       state: readParam(params, 'state', MAX_STATE_LENGTH),
-      iss: readParam(params, 'iss', MAX_ERROR_LENGTH),
+      iss: readParam(params, 'iss', MAX_ISS_LENGTH),
       error: readParam(params, 'error', MAX_ERROR_LENGTH),
       errorDescription: readParam(params, 'error_description', MAX_ERROR_LENGTH),
       receivedAt: Date.now(),
     };
 
-    console.log('[CALLBACK] captured', {
-      hasCode: Boolean(captured.code),
-      error: captured.error,
+    // HEAD is routed to this handler and the path is reachable from the
+    // internet, so a probe, a link preview or a reload must not evict a code
+    // that has not been collected yet.
+    if (arriving.code || arriving.error) {
+      captured = arriving;
+    }
+
+    console.log('[CALLBACK] request', {
+      hasCode: Boolean(arriving.code),
+      error: arriving.error,
+      stored: Boolean(arriving.code || arriving.error),
     });
 
-    const page = Buffer.from(renderPage(captured));
+    const page = Buffer.from(renderPage(arriving));
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Length': page.length,
       'Cache-Control': 'no-store',
       // SECURITY_HEADERS carries no CSP because every other response is JSON.
-      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
     });
     res.end(page);
   };

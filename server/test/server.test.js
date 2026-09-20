@@ -713,10 +713,13 @@ test('maps a CAS timeout or transport failure to 502, never to a caller 4xx', as
 const startCatcherServer = async () => {
   const previous = process.env.DEMO_CALLBACK_CATCHER;
   process.env.DEMO_CALLBACK_CATCHER = 'true';
-  // createApp reads the flag at call time, so the module cache is irrelevant.
-  const app = createApp({ httpClient: { get: async () => { throw new Error('unused'); }, post: async () => { throw new Error('unused'); } } });
-  if (previous === undefined) delete process.env.DEMO_CALLBACK_CATCHER;
-  else process.env.DEMO_CALLBACK_CATCHER = previous;
+  let app;
+  try {
+    app = createApp({ httpClient: { get: async () => { throw new Error('unused'); }, post: async () => { throw new Error('unused'); } } });
+  } finally {
+    if (previous === undefined) delete process.env.DEMO_CALLBACK_CATCHER;
+    else process.env.DEMO_CALLBACK_CATCHER = previous;
+  }
 
   const server = await new Promise((resolve) => {
     const listeningServer = app.listen(0, '127.0.0.1', () => resolve(listeningServer));
@@ -799,6 +802,37 @@ test('keeps the captured code out of caches', async () => {
   try {
     const response = await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`);
     assert.equal(response.headers.get('cache-control'), 'no-store');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('keeps a pending capture when a bare request hits the callback path', async () => {
+  const fixture = await startCatcherServer();
+  try {
+    await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback?code=keep-me&state=${state}`);
+
+    // A probe, a link preview or a reload must not evict an uncollected code.
+    await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback`);
+    await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback`, { method: 'HEAD' });
+    await fetch(`${fixture.baseUrl}/_krdpass/oauth/callback?code=${'x'.repeat(5000)}`);
+
+    const captured = await (await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`)).json();
+    assert.equal(captured.code, 'keep-me');
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('rate limits the route that hands out the code', async () => {
+  const fixture = await startCatcherServer();
+  try {
+    let limited = 0;
+    for (let i = 0; i < 31; i += 1) {
+      const response = await fetch(`${fixture.baseUrl}/_krdpass/demo/last-callback`);
+      if (response.status === 429) limited += 1;
+    }
+    assert.ok(limited > 0, 'expected the catcher fetch route to be rate limited');
   } finally {
     await fixture.close();
   }

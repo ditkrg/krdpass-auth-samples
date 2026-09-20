@@ -131,7 +131,7 @@ after sign-in. The route renders the `code` and `state` on a plain page and
 parks them in memory; `GET /_krdpass/demo/last-callback` returns them as JSON:
 
 ```json
-{ "pending": false, "code": "...", "state": "...", "receivedAt": 1758326400000 }
+{ "pending": false, "code": "...", "state": "...", "iss": "...", "receivedAt": 1758326400000 }
 ```
 
 The JSON route hands a capture out **once**. A second read answers

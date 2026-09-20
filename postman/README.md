@@ -12,7 +12,8 @@ Import both files:
 ## Just checking that PAR works
 
 You do not need a tunnel, a phone, or the callback catcher to answer "does PAR succeed and
-what does it need". PAR is a server-to-CAS call. Only steps 3 and 4 involve a device.
+what does it need". PAR is a server-to-CAS call, and step 2 answers it on its own. The
+device only matters once you want to use the launch URL step 2 produces.
 
 What you do need is the server running, and that is the part a `clientId` alone will not
 buy you. This server is the confidential half of the flow: it signs the authorization
@@ -63,8 +64,9 @@ cannot receive it, so something has to be listening there.
 5. **No app on the test phone may claim that host.** An installed sample app takes the
    redirect through Universal Links or App Links, fails its own `state` check because the
    transaction belongs to Postman, and the catcher never sees it. Uninstall it.
-6. Fill `clientId` and `redirectUri` in the Postman environment. Both are in
-   `shared/secrets/.env` as `CLIENT_ID` and `REDIRECT_URI`.
+6. Fill `clientId` and `redirectUri` in the Postman environment, using the values issued at
+   onboarding. In this repo they are the `CLIENT_ID` and `REDIRECT_URI` you put in
+   `shared/secrets/.env`, which is gitignored and created from its `.env.example`.
 
 Use an iPhone. The iOS transport is a Universal Link in both directions, which is the
 closest thing to what this collection does by hand. Android sign-in is an Activity result,
@@ -84,8 +86,11 @@ Open the Sign-in flow folder and send the four requests in order.
 | 4. Token exchange | Trades the code for tokens. |
 
 Between 2 and 3, open the launch URL from the console on the phone and sign in. The phone
-lands on a page showing the code, and step 3 picks it up. Step 3 answers
-`{"pending": true}` until that happens, so send it again after signing in.
+lands on a page showing the code, and step 3 picks it up.
+
+Until the redirect arrives, step 3 answers `{"pending": true}` and its test reports a
+failure reading "Still waiting for the redirect." That is the normal state before you have
+signed in, not a broken request. Send it again once the phone is done.
 
 A 200 on step 2 is worth something on its own. It means CAS accepted the signed request,
 so the client id, client secret, RSA signing key, redirect URI and scopes are all correct
@@ -104,8 +109,9 @@ sign-in.
 
 ## Things that will catch you out
 
-- **Two clocks.** The server transaction defaults to 5 minutes, caps at 10 through
-  `AUTH_TRANSACTION_TTL_MS`, and never outlives the PAR `expires_in` CAS returns. KRDPASS
+- **Two clocks.** The server transaction defaults to 5 minutes, is clamped to between 30
+  seconds and 10 minutes through `AUTH_TRANSACTION_TTL_MS`, and never outlives the PAR
+  `expires_in` CAS returns. KRDPASS
   expires the same `request_uri` on its own schedule. Have the phone in your hand before
   sending step 2.
 - **One shot per PAR.** The `state` is consumed atomically at token exchange and the code
@@ -117,6 +123,5 @@ sign-in.
   it. The catcher routes sit outside `/oauth/`, so polling step 3 is free.
 - **Nothing arrives at all?** Check the Postman console for the launch URL, check the
   hostname really routes to the server running the catcher, and check no app on the phone
-  claims the redirect host. One unverified possibility is left: if KRDPASS opens the
-  redirect as a universal link only and nothing on the device claims that host, the
-  redirect fails silently and the catcher never sees it.
+  claims the redirect host. A redirect opened as a universal link with nothing on the
+  device claiming that host fails silently, and the catcher never sees it.

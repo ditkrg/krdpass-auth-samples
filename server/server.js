@@ -572,8 +572,13 @@ if (process.env.DEMO_UNAUTHENTICATED_TOKEN_ROUTES === 'true') {
 
 route('GET', '/health', (req, res) => sendJson(res, 200, { status: 'ok' }));
 
-// Demo-only capture of the KRDPASS redirect, so a REST client can drive the
-// flow with no sample app installed. Off by default: see server/README.md.
+/**
+ * DEMO ONLY - DELIBERATELY UNAUTHENTICATED. DO NOT SHIP IT AS IS: the callback
+ * route is reachable by anyone who can reach this server, and the fetch route
+ * hands out the last authorization code it captured. It exists so a REST client
+ * can drive the flow with no sample app installed. A real deployment receives
+ * the redirect on an authenticated session and never exposes the code.
+ */
 if (process.env.DEMO_CALLBACK_CATCHER === 'true') {
   const catcher = createCallbackCatcher();
   route('GET', CALLBACK_PATH, catcher.handleCallback);
@@ -592,6 +597,9 @@ const server = http.createServer(async (req, res) => {
 
   const path = (req.url || '/').split('?')[0];
   const isOAuthPath = path === '/oauth' || path.startsWith('/oauth/');
+  // The catcher hands out an authorization code, so it is rate limited with
+  // the OAuth routes even though it sits outside that prefix.
+  const isRateLimitedPath = isOAuthPath || path === CALLBACK_PATH || path === LAST_CALLBACK_PATH;
   if (isOAuthPath) {
     // Prevent auth responses from being cached by intermediaries.
     res.setHeader('Cache-Control', 'no-store');
@@ -599,7 +607,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    if (isOAuthPath && isRateLimited(req.socket.remoteAddress || 'unknown')) {
+    if (isRateLimitedPath && isRateLimited(req.socket.remoteAddress || 'unknown')) {
       res.setHeader('Retry-After', String(RATE_LIMIT_WINDOW_MS / 1000));
       return sendOAuthError(res, 429, 'temporarily_unavailable', 'Too many requests. Retry later.');
     }
@@ -660,6 +668,14 @@ if (isDirectExecution) {
     console.warn(
       '[WARN] This reference server is intended for trusted dev environments only.'
     );
+  }
+
+  // A tunnel can publish a loopback bind, so the host check above is not enough
+  // on its own to tell someone their demo routes are reachable.
+  for (const flag of ['DEMO_UNAUTHENTICATED_TOKEN_ROUTES', 'DEMO_CALLBACK_CATCHER']) {
+    if (process.env[flag] === 'true') {
+      console.warn(`[WARN] ${flag} is on. Its routes have no authentication in front of them.`);
+    }
   }
 
   app.listen(PORT, HOST, () => {
