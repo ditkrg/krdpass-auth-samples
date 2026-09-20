@@ -92,8 +92,7 @@ openssl req -new -x509 -key private-key.pem -out client-cert.pem -days 3650
 
 CAS verifies your signed authorization requests (JAR, RFC 9101) against an X.509
 certificate registered on your client, so `client-cert.pem` is what onboarding needs. Send
-the certificate rather than the public key on its own. The subject is yours to choose, and
-`-days` should match your rotation policy.
+the certificate rather than the public key on its own.
 
 Keep `private-key.pem` on the server and put it into `.env` as one escaped line. This prints
 it in the form `.env` wants, with literal `\n` rather than real line breaks:
