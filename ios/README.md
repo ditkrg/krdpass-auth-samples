@@ -72,4 +72,4 @@ To run on a real iPhone:
 
 - Build and run every sample: [../docs/BUILDING.md](../docs/BUILDING.md)
 - iOS SDK README: https://github.com/ditkrg/krdpass-auth-sdk-ios#readme
-- Sign in with KRDPASS protocol & backend reference: https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html
+- Sign in with KRDPASS protocol & backend reference: https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-overview.html

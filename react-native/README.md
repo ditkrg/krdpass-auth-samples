@@ -7,7 +7,7 @@ Reference Expo app for **Sign in with KRDPASS**. The SDK package supports both E
 - Node.js 22.11+ (CI builds on 24)
 - Expo CLI tooling
 - iOS/Android native toolchains for `expo run:*`
-- A running backend that implements the server-mediated PAR + token exchange (see [Sign in with KRDPASS](https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html))
+- A running backend that implements the server-mediated PAR + token exchange (see [Sign in with KRDPASS](https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-overview.html))
 
 This sample intentionally commits and maintains its Android native project;
 the iOS project is generated locally by Expo prebuild. Expo Doctor's app-config
@@ -97,5 +97,5 @@ npx expo start --dev-client --tunnel
 
 - React Native SDK README: https://github.com/ditkrg/krdpass-auth-sdk-react-native#readme
 - Bare React Native sample: [`../react-native-bare`](../react-native-bare)
-- Sign in with KRDPASS (backend integration reference): https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html
+- Sign in with KRDPASS (backend integration reference): https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-overview.html
 - Toolchain pins: [`../docs/BUILDING.md`](../docs/BUILDING.md#toolchain-pins)
