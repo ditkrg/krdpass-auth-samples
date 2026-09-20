@@ -13,16 +13,30 @@
 
 import http from 'node:http';
 
-import { AUTH_TRANSACTION_TTL_MS, MAX_CODE_LENGTH, MAX_STATE_LENGTH, sendJson } from './support.js';
+// Deliberately imports nothing from the reference server. This process is the
+// one meant to be reachable from the internet, so it must not load `.env` or
+// pull in a module that holds CLIENT_SECRET and the signing key.
 
 export const CALLBACK_PATH = process.env.CATCHER_PATH || '/_krdpass/oauth/callback';
 export const LAST_CALLBACK_PATH = '/_krdpass/demo/last-callback';
 
 const HOST = process.env.CATCHER_HOST || '127.0.0.1';
 const PORT = Number(process.env.CATCHER_PORT) || 3001;
+const CAPTURE_TTL_MS = Number(process.env.CATCHER_TTL_MS) || 5 * 60 * 1000;
+const MAX_CODE_LENGTH = 4096;
+const MAX_STATE_LENGTH = 256;
 const MAX_PARAM_LENGTH = 512;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
+
+const sendJson = (res, status, payload) => {
+  const body = Buffer.from(JSON.stringify(payload));
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': body.length,
+  });
+  res.end(body);
+};
 
 const HTML_ENTITIES = Object.freeze({
   '&': '&amp;',
@@ -117,7 +131,7 @@ export const createCallbackCatcher = () => {
   const handleLastCallback = (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
 
-    if (!captured || Date.now() - captured.receivedAt >= AUTH_TRANSACTION_TTL_MS) {
+    if (!captured || Date.now() - captured.receivedAt >= CAPTURE_TTL_MS) {
       captured = undefined;
       return sendJson(res, 200, { pending: true });
     }

@@ -20,8 +20,9 @@ The SDKs are not in this repository. Each sample installs the published release:
 1. [Integration guide](docs/INTEGRATION.md), for the end-to-end picture.
 2. Your platform's SDK README, linked above, for installation and API.
 3. The matching sample here, to see it working.
-4. [`server`](server/README.md), if you are building the server-mediated flow.
-5. [`postman`](postman/README.md), to drive the server from a REST client with no sample app.
+4. [`server`](server/README.md), if you are building the server-mediated flow. It comes with
+   a [Postman collection](postman/README.md) for driving it from a REST client, which is the
+   quickest way to check your credentials before any app is involved.
 
 To build and run the samples, see [docs/BUILDING.md](docs/BUILDING.md).
 

@@ -127,8 +127,11 @@ sends the browser after sign-in. It renders the `code` and `state` on a plain
 page and parks them in memory; `GET /_krdpass/demo/last-callback` returns them
 as JSON:
 
-It is a separate process on purpose. This server is the part integrators copy,
-and nothing in it should hand out an authorization code without authentication.
+It is a separate process on purpose, and it imports nothing from this server. This server is
+the part integrators copy, and nothing in it should hand out an authorization code without
+authentication. The catcher does not read `.env` either: it is the one component meant to be
+reachable from the internet, so it never loads the client secret or the signing key.
+Configure it on its own command line, for example `CATCHER_PORT=3001 npm run catcher`.
 
 ```json
 { "pending": false, "code": "...", "state": "...", "iss": "...", "receivedAt": 1758326400000 }

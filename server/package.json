@@ -18,6 +18,6 @@
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file-if-exists=.env --watch server.js",
     "test": "node --test",
-    "catcher": "node --env-file-if-exists=.env callback-catcher.js"
+    "catcher": "node callback-catcher.js"
   }
 }
