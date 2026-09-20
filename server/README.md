@@ -84,12 +84,11 @@ tests. Off by default, and it needs the `DEMO_IOS_*` / `DEMO_ANDROID_*` values b
 
 ```bash
 openssl genrsa -out private-key.pem 2048
-
-# -subj is only there to stop openssl asking you seven questions; CAS never
-# checks the subject, so the value is a label. -days is yours too.
-openssl req -new -x509 -key private-key.pem -out client-cert.pem -days 3650 \
-  -subj "/CN=your-client-id" -sha256
+openssl req -new -x509 -key private-key.pem -out client-cert.pem -days 3650
 ```
+
+`openssl` asks for a subject. CAS reads none of it, so answer however suits you or pass
+`-subj` to skip the questions. `-days` is worth setting: the default is 30 days.
 
 CAS verifies your signed authorization requests (JAR, RFC 9101) against an X.509
 certificate registered on your client, so `client-cert.pem` is what onboarding needs. Send
