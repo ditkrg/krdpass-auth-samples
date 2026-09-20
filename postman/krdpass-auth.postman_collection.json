@@ -299,7 +299,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"environment\": \"{{environment}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -345,7 +345,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"{{refreshToken}}\",\n  \"tokenTypeHint\": \"refresh_token\"\n}",
+              "raw": "{\n  \"token\": \"{{refreshToken}}\",\n  \"tokenTypeHint\": \"refresh_token\",\n  \"environment\": \"{{environment}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
