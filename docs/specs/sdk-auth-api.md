@@ -31,7 +31,7 @@ process. React Native exposes this as a module-level function rather than a
 singleton object, but it is still called once and still global.
 
 - **Android:** `KrdpassAuth.initialize(config)`
-- **iOS:** `KrdpassAuth.initialize(_:urlOpener:urlSession:)`
+- **iOS:** `KrdpassAuth.initialize(_:urlSession:)`
 - **Flutter:** `KrdpassAuth.instance.initialize(config: config)`
 - **React Native:** `initialize(config)`, exported from the package root
 
@@ -277,3 +277,4 @@ native failure and is not converted into a browser launch.
 | Logging hook | `KrdpassLogger` | `KrdpassLogger` | `KrdpassLogger` | none |
 | Token redaction in `toString` | Yes | Yes | Yes | No, plain interfaces |
 | Verifies refresh-response `id_token` | Yes | Yes | Yes (native core) | Yes (native core) |
+| Minimum iOS deployment target | n/a | 15.0 | 15.0 | 15.5, set by the wrapper's own podspec |
