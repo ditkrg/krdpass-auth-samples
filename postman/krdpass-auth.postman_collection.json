@@ -1,0 +1,783 @@
+{
+  "info": {
+    "name": "KRDPASS Auth, server-mediated flow",
+    "description": "Drives the reference server in ../server from Postman. Everything runs here except the sign-in itself, which needs a person in the KRDPASS app on a phone.\n\nRun the Sign-in flow folder top to bottom. Step 2 logs a launch URL to the Postman console; open it on the phone, sign in, then re-send step 3 to collect the code.\n\nSee postman/README.md for what has to be true before any of this works.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Sign-in flow",
+      "item": [
+        {
+          "name": "1. Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('server is up', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Confirms the reference server is running and reachable."
+          }
+        },
+        {
+          "name": "2. Pushed authorization request",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('clientId') || !pm.variables.get('redirectUri')) {",
+                  "    throw new Error('Set clientId and redirectUri in the environment before sending this request.');",
+                  "}",
+                  "",
+                  "const toBase64Url = (value) => value",
+                  "    .replace(/\\+/g, '-')",
+                  "    .replace(/\\//g, '_')",
+                  "    .replace(/=+$/, '');",
+                  "",
+                  "// The Postman app exposes a node-style `crypto` and warns on CryptoJS;",
+                  "// newman's sandbox has no such global. Prefer it where it exists.",
+                  "const useNodeCrypto = typeof crypto !== 'undefined'",
+                  "    && typeof crypto.createHash === 'function'",
+                  "    && typeof crypto.randomBytes === 'function';",
+                  "",
+                  "// 32 random bytes render as 43 base64url chars, the RFC 7636 minimum.",
+                  "const randomBase64Url = (bytes) => useNodeCrypto",
+                  "    ? toBase64Url(crypto.randomBytes(bytes).toString('base64'))",
+                  "    : toBase64Url(CryptoJS.enc.Base64.stringify(CryptoJS.lib.WordArray.random(bytes)));",
+                  "",
+                  "const sha256Base64Url = (value) => useNodeCrypto",
+                  "    ? toBase64Url(crypto.createHash('sha256').update(value).digest('base64'))",
+                  "    : toBase64Url(CryptoJS.enc.Base64.stringify(CryptoJS.SHA256(value)));",
+                  "",
+                  "const codeVerifier = randomBase64Url(32);",
+                  "",
+                  "pm.collectionVariables.set('codeVerifier', codeVerifier);",
+                  "pm.collectionVariables.set('codeChallenge', sha256Base64Url(codeVerifier));",
+                  "pm.collectionVariables.set('state', randomBase64Url(16));",
+                  "pm.collectionVariables.set('code', '');",
+                  ""
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "});",
+                  "",
+                  "pm.test('PAR returned 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('PAR returned a request_uri', function () {",
+                  "    pm.expect(body.requestUri).to.be.a('string').and.to.not.be.empty;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('requestUri', body.requestUri);",
+                  "pm.collectionVariables.set('state', body.state);",
+                  "",
+                  "const launchUrl = pm.variables.get('authorizeBase')",
+                  "    + '?client_id=' + encodeURIComponent(pm.variables.get('clientId'))",
+                  "    + '&request_uri=' + encodeURIComponent(body.requestUri)",
+                  "    + '&redirect_uri=' + encodeURIComponent(pm.variables.get('redirectUri'))",
+                  "    + '&state=' + encodeURIComponent(body.state);",
+                  "",
+                  "pm.collectionVariables.set('launchUrl', launchUrl);",
+                  "",
+                  "console.log('Open this on a phone with KRDPASS installed, within ' + body.expiresIn + ' seconds:');",
+                  "console.log(launchUrl);",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"{{codeChallenge}}\",\n  \"codeChallengeMethod\": \"S256\",\n  \"state\": \"{{state}}\",\n  \"environment\": \"{{environment}}\",\n  \"redirectUri\": \"{{redirectUri}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Generates PKCE and state, then asks the server for a PAR request_uri. A 200 here proves the client id, client secret, signing key, redirect URI and scopes are all accepted by CAS.\n\nThe test script logs the launch URL to the Postman console. Open it on a phone that has KRDPASS installed."
+          }
+        },
+        {
+          "name": "3. Wait for the authorization code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "",
+                  "if (body.pending) {",
+                  "    console.log('No redirect captured yet. Open the launch URL from step 2 on the phone, finish signing in, then send this request again.');",
+                  "    pm.test('authorization code captured', function () {",
+                  "        pm.expect.fail('Still waiting for the redirect.');",
+                  "    });",
+                  "} else if (body.error) {",
+                  "    pm.test('authorization succeeded', function () {",
+                  "        pm.expect.fail(body.error + ': ' + (body.errorDescription || 'no description'));",
+                  "    });",
+                  "} else {",
+                  "    pm.test('authorization code captured', function () {",
+                  "        pm.expect(body.code).to.be.a('string').and.to.not.be.empty;",
+                  "    });",
+                  "",
+                  "    pm.test('state matches the one sent to PAR', function () {",
+                  "        pm.expect(body.state).to.eql(pm.collectionVariables.get('state'));",
+                  "    });",
+                  "",
+                  "    pm.collectionVariables.set('code', body.code);",
+                  "}",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catcherBaseUrl}}/_krdpass/demo/last-callback",
+              "host": [
+                "{{catcherBaseUrl}}"
+              ],
+              "path": [
+                "_krdpass",
+                "demo",
+                "last-callback"
+              ]
+            },
+            "description": "Collects the code KRDPASS delivered to the redirect URI. Needs the catcher running: `cd server && npm run catcher`.\n\nAnswers {\"pending\": true} until the phone step is done, and its test reports \"Still waiting for the redirect.\" until then. Re-send it after signing in. A capture is handed out once."
+          }
+        },
+        {
+          "name": "4. Token exchange",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('token exchange returned 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('returned an access token and an ID token', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.to.not.be.empty;",
+                  "    pm.expect(body.idToken).to.be.a('string').and.to.not.be.empty;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('accessToken', body.accessToken || '');",
+                  "pm.collectionVariables.set('refreshToken', body.refreshToken || '');",
+                  "pm.collectionVariables.set('idToken', body.idToken || '');",
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{code}}\",\n  \"codeVerifier\": \"{{codeVerifier}}\",\n  \"state\": \"{{state}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Exchanges the code for tokens. The server restores environment, redirect URI and nonce from its own PAR state, so this body carries nothing else."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Optional token routes",
+      "item": [
+        {
+          "name": "Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refresh returned 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', body.accessToken || '');",
+                  "pm.collectionVariables.set('refreshToken', body.refreshToken || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"environment\": \"{{environment}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Needs DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true, otherwise 404."
+          }
+        },
+        {
+          "name": "Revoke",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revoke returned 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token",
+                "revoke"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{refreshToken}}\",\n  \"tokenTypeHint\": \"refresh_token\",\n  \"environment\": \"{{environment}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Needs DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true, otherwise 404."
+          }
+        }
+      ],
+      "description": "Both are 404 unless DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true."
+    },
+    {
+      "name": "Validation checks",
+      "item": [
+        {
+          "name": "PAR rejects a method other than S256",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('codeChallengeMethod must be S256');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"codeChallengeMethod\": \"plain\",\n  \"state\": \"validation-check-method\",\n  \"environment\": \"{{environment}}\",\n  \"redirectUri\": \"{{redirectUri}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PAR rejects a short codeChallenge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('codeChallenge must be base64url');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"too-short\",\n  \"codeChallengeMethod\": \"S256\",\n  \"state\": \"validation-check-challenge\",\n  \"environment\": \"{{environment}}\",\n  \"redirectUri\": \"{{redirectUri}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PAR rejects a scope without openid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_scope', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_scope');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('scope must include openid');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"codeChallengeMethod\": \"S256\",\n  \"state\": \"validation-check-scope\",\n  \"environment\": \"{{environment}}\",\n  \"redirectUri\": \"{{redirectUri}}\",\n  \"scope\": \"profile\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PAR rejects an unknown environment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('environment must be one of');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"codeChallengeMethod\": \"S256\",\n  \"state\": \"validation-check-environment\",\n  \"environment\": \"staging\",\n  \"redirectUri\": \"{{redirectUri}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PAR rejects a redirect host outside the allowlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('redirectUri host is not in server allowlist');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"codeChallengeMethod\": \"S256\",\n  \"state\": \"validation-check-redirect\",\n  \"environment\": \"{{environment}}\",\n  \"redirectUri\": \"https://not-allowlisted.example.com/callback\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PAR rejects an authServerUrl override",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('authServerUrl override is not allowed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/par",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "par"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeChallenge\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"codeChallengeMethod\": \"S256\",\n  \"state\": \"validation-check-authserver\",\n  \"environment\": \"{{environment}}\",\n  \"redirectUri\": \"{{redirectUri}}\",\n  \"authServerUrl\": \"https://attacker.example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Token rejects fields outside code, codeVerifier and state",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_request');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('Only code, codeVerifier, and state are allowed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"some-code\",\n  \"codeVerifier\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n  \"state\": \"validation-check-extra\",\n  \"redirectUri\": \"{{redirectUri}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Token rejects an unknown state",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('answers 400 invalid_grant', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid_grant');",
+                  "    pm.expect(pm.response.json().error_description)",
+                  "        .to.include('Invalid or expired state parameter');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"some-code\",\n  \"codeVerifier\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n  \"state\": \"validation-check-unknown-state\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "description": "Server-side rejections. No phone and no CAS round trip needed."
+    }
+  ],
+  "variable": [
+    {
+      "key": "codeVerifier",
+      "value": ""
+    },
+    {
+      "key": "codeChallenge",
+      "value": ""
+    },
+    {
+      "key": "state",
+      "value": ""
+    },
+    {
+      "key": "requestUri",
+      "value": ""
+    },
+    {
+      "key": "launchUrl",
+      "value": ""
+    },
+    {
+      "key": "code",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "idToken",
+      "value": ""
+    }
+  ]
+}

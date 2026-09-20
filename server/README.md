@@ -134,9 +134,51 @@ curl http://localhost:3000/health
 - `POST /oauth/token/revoke` (only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true`)
 - `GET /health`
 
+## Driving the flow from a REST client
+
+The sample apps are not the only way to exercise this server. A REST client can
+run every step except the one that needs a person: PKCE and `state` generation,
+`POST /oauth/par`, and `POST /oauth/token`. What it cannot do is produce the
+authorization code, which only exists once someone authenticates in KRDPASS.
+
+`npm run catcher` closes that gap. It starts a second process on port 3001 that
+listens at the path of your registered redirect URI, which is where KRDPASS
+sends the browser after sign-in. It renders the `code` and `state` on a plain
+page and parks them in memory; `GET /_krdpass/demo/last-callback` returns them
+as JSON:
+
+It is a separate process on purpose, and it imports nothing from this server. This server is
+the part integrators copy, and nothing in it should hand out an authorization code without
+authentication. The catcher does not read `.env` either: it is the one component meant to be
+reachable from the internet, so it never loads the client secret or the signing key.
+Configure it on its own command line, for example `CATCHER_PORT=3001 npm run catcher`.
+
+```json
+{ "pending": false, "code": "...", "state": "...", "iss": "...", "receivedAt": 1758326400000 }
+```
+
+The JSON route hands a capture out **once**. A second read answers
+`{ "pending": true }`, as does a capture older than `AUTH_TRANSACTION_TTL_MS`.
+That is deliberate: a leftover code from an abandoned attempt must not be
+exchanged by accident. Loading the page does not consume the capture.
+
+Two things have to be true for the redirect to arrive:
+
+- Your registered redirect URI must resolve to the catcher. It is an HTTPS URL
+  registered during onboarding, and the catcher binds to `127.0.0.1`, so a local
+  run needs a tunnel whose hostname is that registered host, pointed at the
+  catcher's port rather than this server's.
+- No app on the phone may claim that host. An installed sample app takes the
+  redirect through Universal Links or App Links, fails its own `state` check
+  because the transaction belongs to your REST client, and the catcher never
+  sees it.
+
+A ready-made Postman collection for this is in [`../postman`](../postman).
+
 ## Security and Policy Notes
 
 - **`POST /oauth/token/refresh` and `POST /oauth/token/revoke` are unauthenticated in this reference.** There is no session, cookie, bearer check, or CSRF protection in front of either. Anyone who can reach them can post any refresh token or token and this server will attach `CLIENT_SECRET` and act on it at CAS. Both routes are registered only when `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true` is set.
+- **The callback catcher is unauthenticated.** Anyone who can reach it can read the last captured authorization code. That code alone buys an attacker nothing, because the exchange also needs the PKCE `code_verifier` and the `CLIENT_SECRET`, but it is still a credential sitting in memory behind no auth. It runs only when you start it, never as part of this server.
 - In-memory transaction storage is capped and expires entries to limit local-dev growth. It is intentionally not suitable for production, restarts, horizontal scaling, or audit retention.
 - Default bind host is `127.0.0.1` for local development safety.
 - The `ALLOWED_REDIRECT_HOSTS` allowlist is required and fails closed. An empty or unset allowlist rejects every `redirectUri` rather than allowing any HTTPS host, and the server refuses to start without the variable.
