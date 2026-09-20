@@ -17,7 +17,7 @@ runs the OAuth exchange. PKCE and `state` stay in your app:
    default scope, which must include `openid`. Send your own `state` anyway, as every
    sample here does, so the value your app verifies is the one it generated. The
    `codeVerifier` stays in the app. The full request and response bodies are in
-   [Reference: Endpoint Contracts](https://docs.digital.gov.krd/software-development/04-interoperability/16-krdpass-reference.html#endpoint-contracts)
+   [Reference: Endpoint Contracts](https://docs.digital.gov.krd/software-development/04-interoperability/12-krdpass-backend.html#endpoint-contracts)
    and the [PAR request schema](../shared/contracts/bff-par-request.schema.json).
 3. Your app calls the SDK's `authenticate` with that `request_uri` and the `state` the
    response returned, falling back to the one your app generated if the response omits it.
