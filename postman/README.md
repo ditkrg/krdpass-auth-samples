@@ -55,7 +55,7 @@ cannot receive it, so something has to be listening there.
    registered host, pointed at port 3001:
 
    Use whatever already routes that hostname, or a named tunnel pointed at
-   `http://localhost:3000`. Check your tunnel's own current syntax; the exact flags
+   `http://localhost:3001`. Check your tunnel's own current syntax; the exact flags
    change between versions.
 
    If the registered host is already a machine you control, run the catcher there instead
