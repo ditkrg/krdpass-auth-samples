@@ -34,9 +34,9 @@ with it. `npm install` here creates no `node_modules`.
 ## Onboarding
 
 This reference is the confidential half of the flow, so it needs `CLIENT_ID`,
-`CLIENT_SECRET`, the RSA private key matching your registered signing key, your approved
-scopes and environment, and your registered HTTPS redirect URI. See the
-[integration guide](../docs/INTEGRATION.md#onboarding).
+`CLIENT_SECRET`, the RSA private key matching the X.509 certificate you registered at
+onboarding, your approved scopes and environment, and your registered HTTPS redirect URI.
+See the [integration guide](../docs/INTEGRATION.md#onboarding).
 
 ## Step-by-Step Setup
 
@@ -52,7 +52,7 @@ cp .env.example .env
 | --- | --- | --- |
 | `CLIENT_ID` | Yes | OAuth client ID issued during onboarding |
 | `CLIENT_SECRET` | Yes | OAuth client secret issued during onboarding |
-| `RSA_PRIVATE_KEY` | Yes | Full PEM private key (escaped with `\\n` in `.env`) |
+| `RSA_PRIVATE_KEY` | Yes | Full PEM private key, escaped with `\\n` in `.env`. Must be the key inside the X.509 certificate registered at onboarding |
 | `ALLOWED_REDIRECT_HOSTS` | Yes | Comma-separated host allowlist for `redirectUri` (e.g. `auth.myapp.gov.krd`). The server refuses to start without it, and an unlisted host is rejected at `/oauth/par`. `.env.example` ships a placeholder so a fresh clone starts; replace it with your registered redirect host. When using `scripts/sync-secrets.sh`, the `REDIRECT_URI` host is auto-appended. |
 | `HOST` | No | Bind host, defaults to `127.0.0.1` |
 | `PORT` | No | Server port, defaults to `3000` |
@@ -79,16 +79,30 @@ See the full warning under "Security and Policy Notes".
 server, which is what iOS Universal Links and Android App Links need during onboarding
 tests. Off by default, and it needs the `DEMO_IOS_*` / `DEMO_ANDROID_*` values below.
 
-3. Generate RSA private key if needed:
+3. Generate the signing key and its certificate if needed:
 
 ```bash
 openssl genrsa -out private-key.pem 2048
+openssl req -new -x509 -key private-key.pem -out client-cert.pem -days 3650 \
+  -subj "/CN=your-client-id" -sha256
 ```
 
-Then put it into `.env` as one escaped line:
+CAS verifies your signed authorization requests (JAR, RFC 9101) against an X.509
+certificate registered on your client, so `client-cert.pem` is what onboarding needs. Send
+the certificate rather than the public key on its own. The subject is yours to choose, and
+`-days` should match your rotation policy.
+
+Keep `private-key.pem` on the server and put it into `.env` as one escaped line:
 
 ```env
 RSA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+```
+
+To check the key in `.env` and the certificate you sent are a pair, these must match:
+
+```bash
+openssl x509 -in client-cert.pem -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256
+openssl pkey -in private-key.pem -pubout -outform der | openssl dgst -sha256
 ```
 
 4. Install and run:

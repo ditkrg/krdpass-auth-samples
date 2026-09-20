@@ -62,6 +62,9 @@ Prepare:
 - The scopes you need. `openid profile` is the baseline; citizen-identity scopes need
   separate approval.
 - Your exact HTTPS redirect URI.
+- For the server-mediated flow, the X.509 certificate your backend signs authorization
+  requests with. Generate it alongside the private key and send the certificate, not a
+  public key; see [`../server`](../server/README.md#step-by-step-setup).
 - Android: package name and the SHA-256 fingerprint of every signing certificate you ship
   from, including debug and Play App Signing.
 - iOS: bundle identifier, Apple Team ID, and the associated domain host.
