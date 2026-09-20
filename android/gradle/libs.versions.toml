@@ -6,7 +6,7 @@ lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 composeBom = "2026.06.01"
 coil = "3.5.0"
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 kotlinxCoroutines = "1.11.0"
 krdpassAuth = "1.6.0"
 
