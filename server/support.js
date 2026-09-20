@@ -95,9 +95,9 @@ export const logSafeError = (message, err) => {
   console.error(message, sanitizeErrorForLog(err));
 };
 
-// JSON only, no cookies: only the transport and content-sniffing headers
-// apply. CSP, frameguard, COOP and CORP govern documents, and the demo
-// callback catcher is the one response that serves one; it sets its own CSP.
+// JSON only, no cookies, no HTML: only the transport and content-sniffing
+// headers apply. CSP, frameguard, COOP and CORP govern documents, and there is
+// no document here.
 export const SECURITY_HEADERS = Object.freeze({
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',

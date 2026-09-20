@@ -47,19 +47,20 @@ The authorization code is only ever delivered to your **registered redirect URI*
 cannot receive it, so something has to be listening there.
 
 1. Onboarding-approved credentials in `server/.env`, and the server running.
-2. `DEMO_CALLBACK_CATCHER=true` in `server/.env`, so the server answers at the redirect
-   path and parks what arrives.
-3. Your registered redirect URI has to reach that server. It is an HTTPS URL and the
-   server binds to `127.0.0.1`, so a local run needs a tunnel whose hostname is the
-   registered host:
+2. The catcher running, in a second terminal: `cd server && npm run catcher`. It listens on
+   port 3001 at the redirect path and parks what arrives. It is a separate process from the
+   reference server, which never serves this route.
+3. Your registered redirect URI has to reach the catcher. It is an HTTPS URL and the
+   catcher binds to `127.0.0.1`, so a local run needs a tunnel whose hostname is the
+   registered host, pointed at port 3001:
 
    Use whatever already routes that hostname, or a named tunnel pointed at
    `http://localhost:3000`. Check your tunnel's own current syntax; the exact flags
    change between versions.
 
-   If the registered host is already a machine you control, run the server there instead
-   and point `catcherBaseUrl` at it. Only the catcher may live elsewhere: `/oauth/par` and
-   `/oauth/token` must hit the same process, because the transaction store is in memory.
+   If the registered host is already a machine you control, run the catcher there instead
+   and point `catcherBaseUrl` at it. `/oauth/par` and `/oauth/token` must hit the same
+   reference server as each other, because its transaction store is in memory.
 4. `ALLOWED_REDIRECT_HOSTS` in `server/.env` contains that host.
 5. **No app on the test phone may claim that host.** An installed sample app takes the
    redirect through Universal Links or App Links, fails its own `state` check because the
@@ -107,6 +108,9 @@ override, extra fields on the token request, unknown state.
 `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true`, and they need a refresh token from a completed
 sign-in.
 
+Step 3 targets `catcherBaseUrl`, which defaults to the catcher on port 3001. Point it
+elsewhere if you run the catcher on another host.
+
 ## Things that will catch you out
 
 - **Two clocks.** The server transaction defaults to 5 minutes, is clamped to between 30
@@ -120,7 +124,8 @@ sign-in.
   so a stale code from an abandoned attempt is never exchanged by accident.
 - **Rate limit.** 30 requests a minute per peer address across `/oauth/*`, and everything
   from one machine shares a bucket. Running the whole collection twice in a minute trips
-  it. The catcher routes sit outside `/oauth/`, so polling step 3 is free.
+  it. The catcher keeps its own limit of the same size, so polling step 3 does not eat the
+  server's budget.
 - **Nothing arrives at all?** Check the Postman console for the launch URL, check the
   hostname really routes to the server running the catcher, and check no app on the phone
   claims the redirect host. A redirect opened as a universal link with nothing on the

@@ -195,7 +195,7 @@
                 "last-callback"
               ]
             },
-            "description": "Collects the code KRDPASS delivered to the redirect URI. Needs DEMO_CALLBACK_CATCHER=true on the server.\n\nAnswers {\"pending\": true} until the phone step is done, so re-send it after signing in. A capture is handed out once."
+            "description": "Collects the code KRDPASS delivered to the redirect URI. Needs the catcher running: `cd server && npm run catcher`.\n\nAnswers {\"pending\": true} until the phone step is done, and its test reports \"Still waiting for the redirect.\" until then. Re-send it after signing in. A capture is handed out once."
           }
         },
         {
