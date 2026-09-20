@@ -84,6 +84,9 @@ tests. Off by default, and it needs the `DEMO_IOS_*` / `DEMO_ANDROID_*` values b
 
 ```bash
 openssl genrsa -out private-key.pem 2048
+
+# -subj is only there to stop openssl asking you seven questions; CAS never
+# checks the subject, so the value is a label. -days is yours too.
 openssl req -new -x509 -key private-key.pem -out client-cert.pem -days 3650 \
   -subj "/CN=your-client-id" -sha256
 ```
