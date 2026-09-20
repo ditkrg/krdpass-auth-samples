@@ -30,6 +30,11 @@ Reference iOS app for **Sign in with KRDPASS**.
    at your `KRD_REDIRECT_URI` host (`applinks:<that-host>`). The committed value is a
    placeholder host.
 5. For the server-mediated flow, run the reference backend: see `../server`.
+
+   Set `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true` in the server's `.env` if you want
+   the Refresh and Revoke buttons and the revoke half of Sign Out to work. Those
+   routes are off by default and return 404, deliberately: they attach the server's
+   `CLIENT_SECRET` to whatever token a caller posts. See `../server/README.md`.
 6. Build and run: `Product > Run` (Cmd+R).
 
 `./scripts/sync-secrets.sh` from the repository root does steps 3 and 4 for you, plus the
@@ -65,5 +70,6 @@ To run on a real iPhone:
 
 ## Related Docs
 
+- Build and run every sample: [../docs/BUILDING.md](../docs/BUILDING.md)
 - iOS SDK README: https://github.com/ditkrg/krdpass-auth-sdk-ios#readme
 - Sign in with KRDPASS protocol & backend reference: https://docs.digital.gov.krd/software-development/04-interoperability/11-krdpass-sign-in-with-krdpass.html

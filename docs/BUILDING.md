@@ -23,7 +23,7 @@ Only what the sample you are building needs:
 | `android` | JDK 21, Android SDK |
 | `ios` | Xcode 26+ (deployment target iOS 17.0) |
 | `flutter` | Flutter 3.44+, plus the Android and iOS prerequisites |
-| `react-native`, `react-native-bare` | Node.js 24+, plus the Android and iOS prerequisites |
+| `react-native`, `react-native-bare` | Node.js 22.11+, what their `engines` declare, plus the Android and iOS prerequisites. CI builds them on 24 |
 | `server` | Node.js 24+ |
 
 ## Toolchain pins

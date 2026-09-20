@@ -42,6 +42,11 @@ KRD_ENVIRONMENT=development
 3. For the server-mediated flow, stand up a backend that implements PAR + token exchange
    (see `../server` and the integration guide in Related Docs). Point `BACKEND_URL` at it.
 
+   Set `DEMO_UNAUTHENTICATED_TOKEN_ROUTES=true` in the server's `.env` if you want
+   the Refresh and Revoke buttons and the revoke half of Sign Out to work. Those
+   routes are off by default and return 404, deliberately: they attach the server's
+   `CLIENT_SECRET` to whatever token a caller posts. See `../server/README.md`.
+
 4. Android signing (required for sign-in to succeed):
 
 ```bash
